@@ -1,0 +1,1911 @@
+[
+  {
+    "id": "the-last-wish",
+    "t": "The Last Wish",
+    "a": "Andrzej Sapkowski",
+    "g": "SFF",
+    "s": [
+      "Dark Fantasy",
+      "Sword & Sorcery"
+    ],
+    "b": [
+      "Fantasy × Folklore"
+    ],
+    "why": "The Witcher's origin stories — Slavic folklore and monster contracts, the morally grey template you keep returning to.",
+    "isbn": "9781637999134",
+    "year": 1993
+  },
+  {
+    "id": "the-blade-itself",
+    "t": "The Blade Itself",
+    "a": "Joe Abercrombie",
+    "g": "SFF",
+    "s": [
+      "Grimdark",
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "First Law book one — definitive grimdark: brutal, cynical, blackly funny.",
+    "isbn": "9780575091085",
+    "coverId": 14543422,
+    "year": 2006
+  },
+  {
+    "id": "we-are-legion",
+    "t": "We Are Legion (We Are Bob)",
+    "a": "Dennis Taylor",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Hard SF"
+    ],
+    "b": [
+      "Sci-Fi × Humor"
+    ],
+    "why": "A self-replicating Von Neumann probe with a programmer's sense of humor.",
+    "isbn": "9781668221570",
+    "coverId": 8421582,
+    "year": 2016
+  },
+  {
+    "id": "for-we-are-many",
+    "t": "For We Are Many (Bobiverse 2)",
+    "a": "Dennis Taylor",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Hard SF"
+    ],
+    "b": [
+      "Sci-Fi × Humor"
+    ],
+    "why": "More Bobs, more star systems — light, witty hard SF.",
+    "isbn": "9791028111427",
+    "coverId": 11329842,
+    "year": 2017
+  },
+  {
+    "id": "heir-to-the-empire",
+    "t": "Heir to the Empire (Thrawn 1)",
+    "a": "Timothy Zahn",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Media Tie-In"
+    ],
+    "b": [
+      "Sci-Fi × Military"
+    ],
+    "why": "Star Wars Legends — tactical fleet politics and a coldly brilliant antagonist.",
+    "isbn": "9780345530004",
+    "coverId": 11107659,
+    "year": 1991
+  },
+  {
+    "id": "dark-force-rising",
+    "t": "Dark Force Rising (Thrawn 2)",
+    "a": "Timothy Zahn",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Media Tie-In"
+    ],
+    "b": [
+      "Sci-Fi × Military"
+    ],
+    "why": "The Thrawn campaign deepens — strategy over spectacle.",
+    "isbn": "9780553470550",
+    "coverId": 538385,
+    "year": 1992
+  },
+  {
+    "id": "the-last-command",
+    "t": "The Last Command (Thrawn 3)",
+    "a": "Timothy Zahn",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Media Tie-In"
+    ],
+    "b": [
+      "Sci-Fi × Military"
+    ],
+    "why": "Zahn closes the trilogy that defined the Expanded Universe.",
+    "isbn": "9783442352531",
+    "coverId": 6529190,
+    "year": 1993
+  },
+  {
+    "id": "dune",
+    "t": "Dune",
+    "a": "Frank Herbert",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Philosophical SF"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "The desert-planet ur-text behind half your shelf — feudal houses, prophecy, revenge.",
+    "isbn": "9788381881654",
+    "coverId": 11481354,
+    "year": 1965
+  },
+  {
+    "id": "dune-messiah",
+    "t": "Dune Messiah",
+    "a": "Frank Herbert",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Philosophical SF"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "The messiah's reckoning — Herbert deconstructs his own hero.",
+    "isbn": "9785237041484",
+    "coverId": 2421405,
+    "year": 1969
+  },
+  {
+    "id": "children-of-dune",
+    "t": "Children of Dune",
+    "a": "Frank Herbert",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Philosophical SF"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "The next generation inherits the spice and the prophecy.",
+    "isbn": "9780808520948",
+    "coverId": 6976407,
+    "year": 1976
+  },
+  {
+    "id": "god-emperor-of-dune",
+    "t": "God Emperor of Dune",
+    "a": "Frank Herbert",
+    "g": "SFF",
+    "s": [
+      "Space Opera",
+      "Philosophical SF"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "A millennia-spanning meditation on power in the body of a sandworm-man.",
+    "isbn": "9782724215908",
+    "coverId": 6711531,
+    "year": 1981
+  },
+  {
+    "id": "the-way-of-kings",
+    "t": "The Way of Kings (Stormlight 1)",
+    "a": "Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Hard Magic"
+    ],
+    "b": [],
+    "why": "Rule-bound magic and storm-scoured worldbuilding — epic fantasy as engineering.",
+    "isbn": "9783453317109",
+    "coverId": 14658316,
+    "year": 2010
+  },
+  {
+    "id": "words-of-radiance",
+    "t": "Words of Radiance (Stormlight 2)",
+    "a": "Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Hard Magic"
+    ],
+    "b": [],
+    "why": "The magic system pays off its promises.",
+    "isbn": "9780575099043",
+    "coverId": 14658334,
+    "year": 2012
+  },
+  {
+    "id": "oathbringer",
+    "t": "Oathbringer (Stormlight 3)",
+    "a": "Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Hard Magic"
+    ],
+    "b": [],
+    "why": "The war for Roshar widens.",
+    "isbn": "9781429951661",
+    "coverId": 14658111,
+    "year": 2017
+  },
+  {
+    "id": "edgedancer",
+    "t": "Edgedancer (Stormlight)",
+    "a": "Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Hard Magic"
+    ],
+    "b": [],
+    "why": "A novella sidestep with the series' best comic voice.",
+    "isbn": "9781938570353",
+    "coverId": 14658530,
+    "year": 2016
+  },
+  {
+    "id": "rhythm-of-war",
+    "t": "Rhythm of War (Stormlight 4)",
+    "a": "Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Hard Magic"
+    ],
+    "b": [],
+    "why": "Siege, science, and spren — the archive's fourth pillar.",
+    "isbn": "9780765326386",
+    "coverId": 14658361,
+    "year": 2020
+  },
+  {
+    "id": "the-name-of-the-wind",
+    "t": "The Name of the Wind (Kingkiller 1)",
+    "a": "Patrick Rothfuss",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [
+      "Fantasy × Literary"
+    ],
+    "why": "A storyteller frames his own legend — lyrical, prose-forward fantasy.",
+    "isbn": "9780575081390",
+    "coverId": 11480483,
+    "year": 2007
+  },
+  {
+    "id": "the-wise-man-s-fear",
+    "t": "The Wise Man's Fear (Kingkiller 2)",
+    "a": "Patrick Rothfuss",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [
+      "Fantasy × Literary"
+    ],
+    "why": "Kvothe's tale continues in the same gilded prose.",
+    "isbn": "9781473223721",
+    "coverId": 8294024,
+    "year": 2011
+  },
+  {
+    "id": "the-dragonbone-chair",
+    "t": "The Dragonbone Chair",
+    "a": "Tad Williams",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Memory, Sorrow & Thorn — the classic doorstop epic that shaped the genre.",
+    "isbn": "9780809900039",
+    "coverId": 77960,
+    "year": 1988
+  },
+  {
+    "id": "a-game-of-thrones",
+    "t": "A Game of Thrones (ASOIAF 1)",
+    "a": "George R.R. Martin",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Grimdark"
+    ],
+    "b": [
+      "Fantasy × Historical"
+    ],
+    "why": "Political, brutal, grey — the Witcher's nearest epic-fantasy cousin.",
+    "isbn": "9781514256220",
+    "coverId": 9269962,
+    "year": 1996
+  },
+  {
+    "id": "a-clash-of-kings",
+    "t": "A Clash of Kings (ASOIAF 2)",
+    "a": "George R.R. Martin",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Grimdark"
+    ],
+    "b": [
+      "Fantasy × Historical"
+    ],
+    "why": "Five kings, one throne — the war of succession.",
+    "isbn": "9786073108409",
+    "coverId": 8231751,
+    "year": 1998
+  },
+  {
+    "id": "a-storm-of-swords",
+    "t": "A Storm of Swords (ASOIAF 3)",
+    "a": "George R.R. Martin",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Grimdark"
+    ],
+    "b": [
+      "Fantasy × Historical"
+    ],
+    "why": "The series at its merciless peak.",
+    "isbn": "9788496208988",
+    "coverId": 15124196,
+    "year": 2000
+  },
+  {
+    "id": "a-feast-for-crows",
+    "t": "A Feast for Crows (ASOIAF 4)",
+    "a": "George R.R. Martin",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Grimdark"
+    ],
+    "b": [
+      "Fantasy × Historical"
+    ],
+    "why": "The aftermath, told from the margins.",
+    "isbn": "9789568352738",
+    "coverId": 6501256,
+    "year": 2005
+  },
+  {
+    "id": "a-dance-with-dragons",
+    "t": "A Dance with Dragons (ASOIAF 5)",
+    "a": "George R.R. Martin",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy",
+      "Grimdark"
+    ],
+    "b": [
+      "Fantasy × Historical"
+    ],
+    "why": "Dragons, the Wall, and Essos converge.",
+    "isbn": "9780307951229",
+    "coverId": 11298743,
+    "year": 2008
+  },
+  {
+    "id": "the-shadow-rising",
+    "t": "The Shadow Rising (WoT 4)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Wheel of Time hits its stride — the marathon epic begins in earnest.",
+    "isbn": "9788445007037",
+    "coverId": 603240,
+    "year": 1992
+  },
+  {
+    "id": "the-fires-of-heaven",
+    "t": "The Fires of Heaven (WoT 5)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "The Pattern widens across nations.",
+    "isbn": "9781593976064",
+    "coverId": 603821,
+    "year": 1993
+  },
+  {
+    "id": "lord-of-chaos",
+    "t": "Lord of Chaos (WoT 6)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Power consolidates; the stakes turn cosmic.",
+    "isbn": "9788448034580",
+    "coverId": 182398,
+    "year": 1994
+  },
+  {
+    "id": "a-crown-of-swords",
+    "t": "A Crown of Swords (WoT 7)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "The slow burn that fans either savor or endure.",
+    "isbn": "9780356517063",
+    "coverId": 10293497,
+    "year": 1996
+  },
+  {
+    "id": "the-path-of-daggers",
+    "t": "The Path of Daggers (WoT 8)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Weather, war, and the One Power.",
+    "isbn": "9781590073995",
+    "coverId": 182462,
+    "year": 1998
+  },
+  {
+    "id": "winter-s-heart",
+    "t": "Winter's Heart (WoT 9)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "A pivotal cleansing at the midpoint.",
+    "isbn": "9788445007082",
+    "coverId": 5021142,
+    "year": 2000
+  },
+  {
+    "id": "crossroads-of-twilight",
+    "t": "Crossroads of Twilight (WoT 10)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "The notorious holding-pattern volume — completionist territory.",
+    "isbn": "9780765337818",
+    "coverId": 604208,
+    "year": 2003
+  },
+  {
+    "id": "knife-of-dreams",
+    "t": "Knife of Dreams (WoT 11)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Jordan's last solo book re-accelerates the plot.",
+    "isbn": "9780812540116",
+    "coverId": 871816,
+    "year": 2005
+  },
+  {
+    "id": "the-gathering-storm",
+    "t": "The Gathering Storm (WoT 12)",
+    "a": "Robert Jordan & Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Sanderson takes the wheel and tightens every thread.",
+    "isbn": "9786053750321",
+    "coverId": 14658062,
+    "year": 2009
+  },
+  {
+    "id": "towers-of-midnight",
+    "t": "Towers of Midnight (WoT 13)",
+    "a": "Robert Jordan & Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "The penultimate convergence before the Last Battle.",
+    "isbn": "9783492707237",
+    "coverId": 14658162,
+    "year": 2010
+  },
+  {
+    "id": "a-memory-of-light",
+    "t": "A Memory of Light (WoT 14)",
+    "a": "Robert Jordan & Brandon Sanderson",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "The Last Battle — fourteen books pay off.",
+    "isbn": "9780765325952",
+    "coverId": 14658328,
+    "year": 2013
+  },
+  {
+    "id": "the-lies-of-locke-lamora",
+    "t": "The Lies of Locke Lamora",
+    "a": "Scott Lynch",
+    "g": "SFF",
+    "s": [
+      "Heist Fantasy",
+      "Sword & Sorcery"
+    ],
+    "b": [
+      "Fantasy × Crime"
+    ],
+    "why": "Con-artist thieves in a Venice-by-way-of-magic — sharp, twisty, fun.",
+    "isbn": "9780553902716",
+    "coverId": 6307636,
+    "year": 2006
+  },
+  {
+    "id": "a-court-of-thorns-and-roses",
+    "t": "A Court of Thorns and Roses",
+    "a": "Sarah J. Maas",
+    "g": "SFF",
+    "s": [
+      "Romantasy",
+      "Epic Fantasy"
+    ],
+    "b": [
+      "Fantasy × Romance"
+    ],
+    "why": "Faerie courts and romance-forward fantasy — the ACOTAR phenomenon.",
+    "isbn": "9783423718493",
+    "coverId": 8738585,
+    "year": 2015
+  },
+  {
+    "id": "a-court-of-mist-and-fury",
+    "t": "A Court of Mist and Fury",
+    "a": "Sarah J. Maas",
+    "g": "SFF",
+    "s": [
+      "Romantasy",
+      "Epic Fantasy"
+    ],
+    "b": [
+      "Fantasy × Romance"
+    ],
+    "why": "The book fans say turns the series — romance and rebellion.",
+    "isbn": "9789124015206",
+    "coverId": 11279902,
+    "year": 2016
+  },
+  {
+    "id": "a-court-of-wings-and-ruin",
+    "t": "A Court of Wings and Ruin",
+    "a": "Sarah J. Maas",
+    "g": "SFF",
+    "s": [
+      "Romantasy",
+      "Epic Fantasy"
+    ],
+    "b": [
+      "Fantasy × Romance"
+    ],
+    "why": "War comes to the faerie courts.",
+    "isbn": "9781635575590",
+    "coverId": 8506724,
+    "year": 2017
+  },
+  {
+    "id": "neuromancer",
+    "t": "Neuromancer",
+    "a": "William Gibson",
+    "g": "SFF",
+    "s": [
+      "Cyberpunk"
+    ],
+    "b": [
+      "Sci-Fi × Thriller",
+      "Sci-Fi × Literary"
+    ],
+    "why": "The foundational cyberpunk heist — console cowboys and AI.",
+    "isbn": "9783608504880",
+    "coverId": 283860,
+    "year": 1984
+  },
+  {
+    "id": "snow-crash",
+    "t": "Snow Crash",
+    "a": "Neal Stephenson",
+    "g": "SFF",
+    "s": [
+      "Cyberpunk"
+    ],
+    "b": [
+      "Sci-Fi × Humor"
+    ],
+    "why": "Metaverse satire delivered at a manic sprint.",
+    "isbn": "9788493066352",
+    "coverId": 392508,
+    "year": 1992
+  },
+  {
+    "id": "cryptonomicon",
+    "t": "Cryptonomicon",
+    "a": "Neal Stephenson",
+    "g": "SFF",
+    "s": [
+      "Techno-Thriller",
+      "Historical Fiction"
+    ],
+    "b": [
+      "Sci-Fi × Historical",
+      "Sci-Fi × Literary"
+    ],
+    "why": "Cryptography across WWII and the dot-com boom — maximalist and digressive.",
+    "isbn": "9783442541935",
+    "coverId": 6424001,
+    "year": 1999
+  },
+  {
+    "id": "reamde",
+    "t": "Reamde",
+    "a": "Neal Stephenson",
+    "g": "Thriller",
+    "s": [
+      "Techno-Thriller",
+      "Action Thriller"
+    ],
+    "b": [
+      "Sci-Fi × Thriller"
+    ],
+    "why": "An MMO exploit spirals into a globe-spanning manhunt.",
+    "isbn": "9781848874510",
+    "coverId": 9295712,
+    "year": 2011
+  },
+  {
+    "id": "dark-matter",
+    "t": "Dark Matter",
+    "a": "Blake Crouch",
+    "g": "SFF",
+    "s": [
+      "Sci-Fi Thriller"
+    ],
+    "b": [
+      "Sci-Fi × Thriller"
+    ],
+    "why": "A many-worlds abduction — high-concept and relentlessly propulsive.",
+    "isbn": "9788416858217",
+    "coverId": 7436634,
+    "year": 2016
+  },
+  {
+    "id": "the-passage",
+    "t": "The Passage",
+    "a": "Justin Cronin",
+    "g": "Horror",
+    "s": [
+      "Post-Apocalyptic",
+      "Vampire Horror"
+    ],
+    "b": [
+      "Horror × Sci-Fi",
+      "Horror × Epic"
+    ],
+    "why": "An engineered virus births vampires and ends the world — epic horror across decades.",
+    "isbn": "9781587672316",
+    "coverId": 8261369,
+    "year": 2010
+  },
+  {
+    "id": "the-twelve",
+    "t": "The Twelve (Passage 2)",
+    "a": "Justin Cronin",
+    "g": "Horror",
+    "s": [
+      "Post-Apocalyptic",
+      "Vampire Horror"
+    ],
+    "b": [
+      "Horror × Sci-Fi",
+      "Horror × Epic"
+    ],
+    "why": "The survivors regroup against the Twelve.",
+    "isbn": "9788492915316",
+    "coverId": 12884497,
+    "year": 2012
+  },
+  {
+    "id": "the-city-of-mirrors",
+    "t": "The City of Mirrors (Passage 3)",
+    "a": "Justin Cronin",
+    "g": "Horror",
+    "s": [
+      "Post-Apocalyptic",
+      "Vampire Horror"
+    ],
+    "b": [
+      "Horror × Sci-Fi",
+      "Horror × Epic"
+    ],
+    "why": "The trilogy's reckoning with patient zero.",
+    "isbn": "9780425285527",
+    "coverId": 12884475,
+    "year": 2015
+  },
+  {
+    "id": "the-keep",
+    "t": "The Keep",
+    "a": "F. Paul Wilson",
+    "g": "Horror",
+    "s": [
+      "Supernatural Horror"
+    ],
+    "b": [
+      "Horror × Historical"
+    ],
+    "why": "Something ancient wakes in a Carpathian keep as the SS move in — WWII supernatural horror.",
+    "isbn": "9780688006266",
+    "coverId": 6520217,
+    "year": 1981
+  },
+  {
+    "id": "the-stand",
+    "t": "The Stand",
+    "a": "Stephen King",
+    "g": "Horror",
+    "s": [
+      "Post-Apocalyptic",
+      "Supernatural Horror"
+    ],
+    "b": [
+      "Horror × Epic"
+    ],
+    "why": "A plague clears the board for a final good-vs-evil reckoning — King's epic.",
+    "isbn": "9788845212178",
+    "coverId": 9255992,
+    "year": 1978
+  },
+  {
+    "id": "the-shining",
+    "t": "The Shining",
+    "a": "Stephen King",
+    "g": "Horror",
+    "s": [
+      "Supernatural Horror"
+    ],
+    "b": [],
+    "why": "The Overlook Hotel turns a family inside out.",
+    "isbn": "9789875668478",
+    "coverId": 12376585,
+    "year": 1977
+  },
+  {
+    "id": "doctor-sleep",
+    "t": "Doctor Sleep",
+    "a": "Stephen King",
+    "g": "Horror",
+    "s": [
+      "Supernatural Horror"
+    ],
+    "b": [],
+    "why": "Grown-up Danny Torrance, decades after the Overlook.",
+    "isbn": "9781444761177",
+    "coverId": 14652972,
+    "year": 2013
+  },
+  {
+    "id": "red-dragon",
+    "t": "Red Dragon (Lecter 1)",
+    "a": "Thomas Harris",
+    "g": "Thriller",
+    "s": [
+      "Serial-Killer Thriller",
+      "Psychological Thriller"
+    ],
+    "b": [
+      "Crime × Horror"
+    ],
+    "why": "The Lecter saga begins — profiling at the edge of horror.",
+    "isbn": "9788440630148",
+    "coverId": 6997898,
+    "year": 1981
+  },
+  {
+    "id": "the-silence-of-the-lambs",
+    "t": "The Silence of the Lambs (Lecter 2)",
+    "a": "Thomas Harris",
+    "g": "Thriller",
+    "s": [
+      "Serial-Killer Thriller",
+      "Psychological Thriller"
+    ],
+    "b": [
+      "Crime × Horror"
+    ],
+    "why": "Clarice and Hannibal — the apex of the form.",
+    "isbn": "9789683910011",
+    "coverId": 8580475,
+    "year": 1988
+  },
+  {
+    "id": "hannibal",
+    "t": "Hannibal (Lecter 3)",
+    "a": "Thomas Harris",
+    "g": "Thriller",
+    "s": [
+      "Serial-Killer Thriller",
+      "Psychological Thriller"
+    ],
+    "b": [
+      "Crime × Horror"
+    ],
+    "why": "Lecter at large — operatic and grotesque.",
+    "isbn": "9783453170520",
+    "coverId": 8384202,
+    "year": 1999
+  },
+  {
+    "id": "red-sparrow",
+    "t": "Red Sparrow",
+    "a": "Jason Matthews",
+    "g": "Thriller",
+    "s": [
+      "Spy Thriller"
+    ],
+    "b": [],
+    "why": "Real CIA-officer tradecraft — sparrow schools and double agents.",
+    "isbn": "9781476706146",
+    "coverId": 7969806,
+    "year": 2013
+  },
+  {
+    "id": "palace-of-treason",
+    "t": "Palace of Treason",
+    "a": "Jason Matthews",
+    "g": "Thriller",
+    "s": [
+      "Spy Thriller"
+    ],
+    "b": [],
+    "why": "The mole hunt deepens inside the SVR.",
+    "isbn": "9781476793740",
+    "coverId": 9252201,
+    "year": 2015
+  },
+  {
+    "id": "the-kremlin-s-candidate",
+    "t": "The Kremlin's Candidate",
+    "a": "Jason Matthews",
+    "g": "Thriller",
+    "s": [
+      "Spy Thriller"
+    ],
+    "b": [],
+    "why": "The trilogy's endgame between Moscow and Langley.",
+    "isbn": "9781508227632",
+    "coverId": 13700031,
+    "year": 2018
+  },
+  {
+    "id": "the-karla-trilogy",
+    "t": "The Karla Trilogy (Smiley)",
+    "a": "John le Carré",
+    "g": "Thriller",
+    "s": [
+      "Spy Thriller",
+      "Literary"
+    ],
+    "b": [
+      "Crime × Literary"
+    ],
+    "why": "Tinker Tailor + Schoolboy + Smiley's People — cerebral, literary espionage.",
+    "year": 1982,
+    "noIsbn": true
+  },
+  {
+    "id": "the-bourne-identity",
+    "t": "The Bourne Identity",
+    "a": "Robert Ludlum",
+    "g": "Thriller",
+    "s": [
+      "Action Thriller",
+      "Espionage"
+    ],
+    "b": [],
+    "why": "The amnesiac-assassin template for the whole spy-action genre.",
+    "isbn": "9780553260113",
+    "coverId": 499340,
+    "year": 1980
+  },
+  {
+    "id": "i-am-pilgrim",
+    "t": "I Am Pilgrim",
+    "a": "Terry Hayes",
+    "g": "Thriller",
+    "s": [
+      "Action Thriller",
+      "Espionage"
+    ],
+    "b": [],
+    "why": "A retired spy versus a lone terrorist — sprawling globe-trotting thriller.",
+    "isbn": "9781439177747",
+    "coverId": 9128395,
+    "year": 2013
+  },
+  {
+    "id": "the-short-drop",
+    "t": "The Short Drop",
+    "a": "Matthew FitzSimmons",
+    "g": "Thriller",
+    "s": [
+      "Action Thriller"
+    ],
+    "b": [],
+    "why": "A political conspiracy and a missing girl — debut Gibson Vaughn thriller.",
+    "isbn": "9781503950344",
+    "coverId": 9728535,
+    "year": 2015
+  },
+  {
+    "id": "a-study-in-scarlet",
+    "t": "A Study in Scarlet",
+    "a": "Arthur Conan Doyle",
+    "g": "Thriller",
+    "s": [
+      "Classic Mystery",
+      "Detective"
+    ],
+    "b": [],
+    "why": "Holmes and Watson meet — the foundation of detective fiction.",
+    "isbn": "9798479401305",
+    "coverId": 13405534,
+    "year": 1887
+  },
+  {
+    "id": "the-sign-of-four",
+    "t": "The Sign of Four",
+    "a": "Arthur Conan Doyle",
+    "g": "Thriller",
+    "s": [
+      "Classic Mystery",
+      "Detective"
+    ],
+    "b": [],
+    "why": "Treasure, tattoos, and deduction on the Thames.",
+    "isbn": "9798698880394",
+    "coverId": 9247987,
+    "year": 1889
+  },
+  {
+    "id": "shogun",
+    "t": "Shogun",
+    "a": "James Clavell",
+    "g": "Literary",
+    "s": [
+      "Historical Fiction",
+      "Adventure & Survival"
+    ],
+    "b": [
+      "Historical × Adventure"
+    ],
+    "why": "An English pilot shipwrecked into feudal Japan — a sweeping clash of cultures.",
+    "isbn": "9780689105654",
+    "coverId": 2394441,
+    "year": 1975
+  },
+  {
+    "id": "pillars-of-the-earth",
+    "t": "Pillars of the Earth",
+    "a": "Ken Follett",
+    "g": "Literary",
+    "s": [
+      "Historical Fiction"
+    ],
+    "b": [],
+    "why": "Building a cathedral in 12th-century England — historical epic.",
+    "isbn": "9788499086514",
+    "coverId": 9269909,
+    "year": 1989
+  },
+  {
+    "id": "world-without-end",
+    "t": "World Without End",
+    "a": "Ken Follett",
+    "g": "Literary",
+    "s": [
+      "Historical Fiction"
+    ],
+    "b": [],
+    "why": "Kingsbridge two centuries on, through plague and war.",
+    "isbn": "9781429543651",
+    "coverId": 362346,
+    "year": 2007
+  },
+  {
+    "id": "pachinko",
+    "t": "Pachinko",
+    "a": "Min Jin Lee",
+    "g": "Literary",
+    "s": [
+      "Historical Fiction",
+      "Family Saga"
+    ],
+    "b": [],
+    "why": "A Korean family across four generations in Japan — quietly devastating.",
+    "isbn": "9781786691378",
+    "coverId": 8044605,
+    "year": 2017
+  },
+  {
+    "id": "the-north-water",
+    "t": "The North Water",
+    "a": "Ian McGuire",
+    "g": "Literary",
+    "s": [
+      "Historical Fiction",
+      "Adventure & Survival"
+    ],
+    "b": [
+      "Crime × Literary"
+    ],
+    "why": "A doomed Arctic whaling voyage with a killer aboard — literary and savage.",
+    "isbn": "9781627795951",
+    "coverId": 12368687,
+    "year": 2016
+  },
+  {
+    "id": "the-innocent",
+    "t": "The Innocent",
+    "a": "Ian McEwan",
+    "g": "Literary",
+    "s": [
+      "Literary",
+      "Cold War"
+    ],
+    "b": [
+      "Crime × Literary"
+    ],
+    "why": "Cold-War Berlin, a tunnel, and a very bad night — literary suspense.",
+    "isbn": "9785867120771",
+    "coverId": 5509507,
+    "year": 1990
+  },
+  {
+    "id": "adventures-of-huckleberry-finn",
+    "t": "Adventures of Huckleberry Finn",
+    "a": "Mark Twain",
+    "g": "Literary",
+    "s": [
+      "Classic",
+      "Adventure & Survival"
+    ],
+    "b": [
+      "Literary × Adventure"
+    ],
+    "why": "The great American river-raft novel — freedom and conscience downstream.",
+    "isbn": "9798463590435",
+    "coverId": 8157718,
+    "year": 1876
+  },
+  {
+    "id": "the-stories-of-vladimir-nabokov",
+    "t": "The Stories of Vladimir Nabokov",
+    "a": "Vladimir Nabokov",
+    "g": "Literary",
+    "s": [
+      "Short Stories",
+      "Literary"
+    ],
+    "b": [],
+    "why": "Collected stories — prose at the highest possible altitude.",
+    "isbn": "9780140189759",
+    "coverId": 420036,
+    "year": 1995
+  },
+  {
+    "id": "norse-mythology",
+    "t": "Norse Mythology",
+    "a": "Neil Gaiman",
+    "g": "Literary",
+    "s": [
+      "Mythology & Folklore"
+    ],
+    "b": [
+      "Fantasy × Folklore"
+    ],
+    "why": "Gaiman retells the Eddas — the source code for a lot of your fantasy.",
+    "isbn": "9781410499493",
+    "coverId": 7898682,
+    "year": 2017
+  },
+  {
+    "id": "sapiens",
+    "t": "Sapiens",
+    "a": "Yuval Noah Harari",
+    "g": "Nonfiction",
+    "s": [
+      "History",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "A provocative sweep through the whole human story.",
+    "isbn": "9782226479822",
+    "coverId": 8634250,
+    "year": 2011
+  },
+  {
+    "id": "guns-germs-and-steel",
+    "t": "Guns, Germs, and Steel",
+    "a": "Jared Diamond",
+    "g": "Nonfiction",
+    "s": [
+      "History",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "Geography as the engine of who conquered whom.",
+    "isbn": "9785271451942",
+    "coverId": 7884018,
+    "year": 1997
+  },
+  {
+    "id": "thinking-fast-and-slow",
+    "t": "Thinking, Fast and Slow",
+    "a": "Daniel Kahneman",
+    "g": "Nonfiction",
+    "s": [
+      "Behavioral Science",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "The two systems behind every decision you make.",
+    "isbn": "9780374275631",
+    "coverId": 13290711,
+    "year": 2011
+  },
+  {
+    "id": "one-summer-america-1927",
+    "t": "One Summer: America, 1927",
+    "a": "Bill Bryson",
+    "g": "Nonfiction",
+    "s": [
+      "History",
+      "Narrative Nonfiction"
+    ],
+    "b": [],
+    "why": "Lindbergh, Ruth, and Capone in one electric American summer.",
+    "year": 2013,
+    "noIsbn": true
+  },
+  {
+    "id": "a-short-history-of-nearly-everything",
+    "t": "A Short History of Nearly Everything",
+    "a": "Bill Bryson",
+    "g": "Nonfiction",
+    "s": [
+      "Science & Nature",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "All of science, explained with genial wonder.",
+    "isbn": "9781409095484",
+    "coverId": 12725620,
+    "year": 2003
+  },
+  {
+    "id": "the-lost-city-of-z",
+    "t": "The Lost City of Z",
+    "a": "David Grann",
+    "g": "Nonfiction",
+    "s": [
+      "Adventure & Survival",
+      "Narrative Nonfiction"
+    ],
+    "b": [],
+    "why": "A deadly obsession with a lost Amazon city — true exploration.",
+    "isbn": "9781847374363",
+    "coverId": 7895353,
+    "year": 2000
+  },
+  {
+    "id": "born-to-run",
+    "t": "Born to Run",
+    "a": "Christopher McDougall",
+    "g": "Nonfiction",
+    "s": [
+      "Adventure & Survival",
+      "Science & Nature"
+    ],
+    "b": [],
+    "why": "The Tarahumara, ultrarunning, and why we're built to run.",
+    "isbn": "9784140814147",
+    "coverId": 8473368,
+    "year": 2009
+  },
+  {
+    "id": "the-premonition",
+    "t": "The Premonition",
+    "a": "Michael Lewis",
+    "g": "Nonfiction",
+    "s": [
+      "Narrative Nonfiction",
+      "Science & Society"
+    ],
+    "b": [],
+    "why": "The outsiders who saw the pandemic coming.",
+    "isbn": "9781713631897",
+    "coverId": 10706277,
+    "year": 2021
+  },
+  {
+    "id": "flash-boys",
+    "t": "Flash Boys",
+    "a": "Michael Lewis",
+    "g": "Nonfiction",
+    "s": [
+      "Economics & Markets",
+      "Narrative Nonfiction"
+    ],
+    "b": [],
+    "why": "High-frequency trading and a rigged market, told as a heist.",
+    "isbn": "9783593501239",
+    "coverId": 8260825,
+    "year": 2014
+  },
+  {
+    "id": "the-trading-game",
+    "t": "The Trading Game",
+    "a": "Gary Stevenson",
+    "g": "Nonfiction",
+    "s": [
+      "Memoir",
+      "Economics & Markets"
+    ],
+    "b": [],
+    "why": "A working-class trader's memoir from inside the City.",
+    "year": 2024,
+    "noIsbn": true
+  },
+  {
+    "id": "capital-in-the-twenty-first-century",
+    "t": "Capital in the Twenty-First Century",
+    "a": "Thomas Piketty",
+    "g": "Nonfiction",
+    "s": [
+      "Economics & Markets",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "The data case that capital outruns labor — inequality, quantified.",
+    "year": 2014,
+    "noIsbn": true
+  },
+  {
+    "id": "the-price-of-inequality",
+    "t": "The Price of Inequality",
+    "a": "Joseph E. Stiglitz",
+    "g": "Nonfiction",
+    "s": [
+      "Economics & Markets",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "How a divided society undermines its own future.",
+    "isbn": "9780393345063",
+    "coverId": 9328023,
+    "year": 2013
+  },
+  {
+    "id": "chasing-the-scream",
+    "t": "Chasing the Scream",
+    "a": "Johann Hari",
+    "g": "Nonfiction",
+    "s": [
+      "Narrative Nonfiction",
+      "Science & Society"
+    ],
+    "b": [],
+    "why": "The war on drugs reframed: the opposite of addiction is connection.",
+    "isbn": "9781408857847",
+    "coverId": 12622416,
+    "year": 2015
+  },
+  {
+    "id": "the-professor-in-the-cage",
+    "t": "The Professor in the Cage",
+    "a": "Jonathan Gottschall",
+    "g": "Nonfiction",
+    "s": [
+      "Narrative Nonfiction",
+      "Science & Society"
+    ],
+    "b": [],
+    "why": "A literature professor takes up MMA to ask why men fight.",
+    "isbn": "9780143108054",
+    "coverId": 12175599,
+    "year": 2015
+  },
+  {
+    "id": "data-ism",
+    "t": "Data-ism",
+    "a": "Steve Lohr",
+    "g": "Nonfiction",
+    "s": [
+      "Technology & Society"
+    ],
+    "b": [],
+    "why": "The big-data revolution and what it's reshaping.",
+    "isbn": "9780062226822",
+    "coverId": 10432813,
+    "year": 2015
+  },
+  {
+    "id": "who-owns-the-future",
+    "t": "Who Owns the Future?",
+    "a": "Jaron Lanier",
+    "g": "Nonfiction",
+    "s": [
+      "Technology & Society",
+      "Big Ideas"
+    ],
+    "b": [],
+    "why": "Who actually profits when your data is the product.",
+    "isbn": "9781664624078",
+    "coverId": 8211733,
+    "year": 2013
+  },
+  {
+    "id": "waking-up",
+    "t": "Waking Up",
+    "a": "Sam Harris",
+    "g": "Nonfiction",
+    "s": [
+      "Philosophy & Spirituality"
+    ],
+    "b": [],
+    "why": "A case for meditation and the mind without the metaphysics.",
+    "isbn": "9781451636017",
+    "coverId": 7311247,
+    "year": 2014
+  },
+  {
+    "id": "from-vines-to-wines",
+    "t": "From Vines to Wines",
+    "a": "Jeff Cox",
+    "g": "Nonfiction",
+    "s": [
+      "Practical & Hobby"
+    ],
+    "b": [],
+    "why": "How to grow grapes and make your own wine — hands-on. (The pizzaiolo energy.)",
+    "isbn": "9780882665283",
+    "coverId": 679957,
+    "year": 1985
+  },
+  {
+    "id": "lonely-planet-vietnam",
+    "t": "Lonely Planet Vietnam",
+    "a": "Lonely Planet",
+    "g": "Nonfiction",
+    "s": [
+      "Practical & Reference",
+      "Travel"
+    ],
+    "b": [],
+    "why": "A travel guide — a trip planned or remembered.",
+    "isbn": "9781787017931",
+    "coverId": 14685732,
+    "year": 2020
+  },
+  {
+    "id": "teaching-esl-efl-reading-writing",
+    "t": "Teaching ESL/EFL Reading & Writing",
+    "a": "I.S.P. Nation",
+    "g": "Nonfiction",
+    "s": [
+      "Practical & Reference"
+    ],
+    "b": [],
+    "why": "A professional ESL-teaching reference.",
+    "isbn": "9780415989688",
+    "coverId": 9306542,
+    "year": 2008
+  },
+  {
+    "id": "teaching-esl-efl-listening-speaking",
+    "t": "Teaching ESL/EFL Listening & Speaking",
+    "a": "J. Newton & I.S.P. Nation",
+    "g": "Nonfiction",
+    "s": [
+      "Practical & Reference"
+    ],
+    "b": [],
+    "why": "Its companion volume — the speaking and listening half.",
+    "year": 2008,
+    "noIsbn": true
+  },
+  {
+    "id": "piranesi",
+    "t": "Piranesi",
+    "a": "Susanna Clarke",
+    "g": "SFF",
+    "s": [
+      "Literary Fantasy",
+      "Portal Fantasy"
+    ],
+    "b": [
+      "Fantasy × Literary"
+    ],
+    "why": "A labyrinth of endless halls and tides, and the gentle soul who maps them — quiet, strange, luminous.",
+    "isbn": "9782221250242",
+    "coverId": 10226290,
+    "year": 2020
+  },
+  {
+    "id": "the-eye-of-the-world",
+    "t": "The Eye of the World (WoT 1)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Where the Wheel begins — villagers flee their burning town into a world-spanning prophecy. (Completes the 4–14 already here.)",
+    "isbn": "9789574679508",
+    "coverId": 980232,
+    "year": 1990
+  },
+  {
+    "id": "the-great-hunt",
+    "t": "The Great Hunt (WoT 2)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "The hunt for the Horn of Valere; the Pattern tightens around Rand.",
+    "isbn": "9781593974336",
+    "coverId": 182352,
+    "year": 1990
+  },
+  {
+    "id": "the-dragon-reborn",
+    "t": "The Dragon Reborn (WoT 3)",
+    "a": "Robert Jordan",
+    "g": "SFF",
+    "s": [
+      "Epic Fantasy"
+    ],
+    "b": [],
+    "why": "Rand stops running and steps toward being the Dragon — the series finds its engine.",
+    "isbn": "9781429960168",
+    "coverId": 603239,
+    "year": 1991
+  },
+  {
+    "id": "the-hobbit",
+    "t": "The Hobbit",
+    "a": "J.R.R. Tolkien",
+    "g": "SFF",
+    "s": [
+      "Classic Fantasy",
+      "Adventure & Survival"
+    ],
+    "b": [
+      "Fantasy × Adventure"
+    ],
+    "why": "The doorstep that started it all — a burglar, thirteen dwarves, and a dragon under the mountain.",
+    "isbn": "9780008376116",
+    "coverId": 14627509,
+    "year": 1937
+  },
+  {
+    "id": "the-amazing-adventures-of-kavalier-clay",
+    "t": "The Amazing Adventures of Kavalier & Clay",
+    "a": "Michael Chabon",
+    "g": "Literary",
+    "s": [
+      "Historical Fiction",
+      "Literary"
+    ],
+    "b": [],
+    "why": "Comic books, escape artistry, and WWII New York — Chabon's Pulitzer-winning epic of golden-age invention.",
+    "isbn": "9781841155609",
+    "coverId": 12745205,
+    "year": 2000
+  },
+  {
+    "id": "the-road",
+    "t": "The Road",
+    "a": "Cormac McCarthy",
+    "g": "Literary",
+    "s": [
+      "Post-Apocalyptic",
+      "Literary"
+    ],
+    "b": [
+      "Literary × Post-Apocalyptic"
+    ],
+    "why": "A father and son push a cart through the ash — McCarthy stripped to the bone, prose that earns its restraint.",
+    "isbn": "9781035003792",
+    "coverId": 198120,
+    "year": 2006
+  },
+  {
+    "id": "the-crossing",
+    "t": "The Crossing (Border Trilogy 2)",
+    "a": "Cormac McCarthy",
+    "g": "Literary",
+    "s": [
+      "Western",
+      "Literary"
+    ],
+    "b": [
+      "Literary × Western"
+    ],
+    "why": "A boy carries a wolf back to the mountains of Mexico — the most mournful of the Border books.",
+    "isbn": "9788401009938",
+    "coverId": 6999576,
+    "year": 1994
+  },
+  {
+    "id": "blood-meridian",
+    "t": "Blood Meridian",
+    "a": "Cormac McCarthy",
+    "g": "Literary",
+    "s": [
+      "Western",
+      "Literary"
+    ],
+    "b": [
+      "Literary × Western",
+      "Western × Horror"
+    ],
+    "why": "The Glanton gang and the Judge — the most violent great American novel, biblical and merciless.",
+    "isbn": "9780880010924",
+    "coverId": 419991,
+    "year": 1985
+  },
+  {
+    "id": "the-border-trilogy",
+    "t": "The Border Trilogy",
+    "a": "Cormac McCarthy",
+    "g": "Literary",
+    "s": [
+      "Western",
+      "Literary"
+    ],
+    "b": [
+      "Literary × Western"
+    ],
+    "why": "All the Pretty Horses + The Crossing + Cities of the Plain — the elegiac heart of McCarthy's West.",
+    "isbn": "9780739320679",
+    "coverId": 225981,
+    "year": 1999
+  },
+  {
+    "id": "no-country-for-old-men",
+    "t": "No Country for Old Men",
+    "a": "Cormac McCarthy",
+    "g": "Literary",
+    "s": [
+      "Crime",
+      "Western",
+      "Literary"
+    ],
+    "b": [
+      "Crime × Literary",
+      "Literary × Western"
+    ],
+    "why": "A satchel of drug money, a remorseless killer, a tired sheriff — McCarthy's leanest, a literary thriller.",
+    "isbn": "9780375406775",
+    "coverId": 9296899,
+    "year": 2005
+  },
+  {
+    "id": "the-brothers-karamazov",
+    "t": "The Brothers Karamazov",
+    "a": "Fyodor Dostoevsky",
+    "g": "Literary",
+    "s": [
+      "Classic"
+    ],
+    "b": [
+      "Crime × Literary"
+    ],
+    "why": "Patricide, faith, and doubt argued at full volume — the novel that taught you a murder plot can carry a whole philosophy.",
+    "isbn": "9798519937580",
+    "coverId": 11263774,
+    "year": 1880
+  },
+  {
+    "id": "hatchet",
+    "t": "Hatchet",
+    "a": "Gary Paulsen",
+    "g": "Literary",
+    "s": [
+      "Adventure & Survival",
+      "Classic"
+    ],
+    "b": [],
+    "why": "One boy, one hatchet, one wrecked bush plane — the childhood survival fantasy you read until the cover fell off.",
+    "isbn": "9781581180558",
+    "coverId": 11240448,
+    "year": 1987
+  },
+  {
+    "id": "my-side-of-the-mountain",
+    "t": "My Side of the Mountain",
+    "a": "Jean Craighead George",
+    "g": "Literary",
+    "s": [
+      "Adventure & Survival",
+      "Classic"
+    ],
+    "b": [],
+    "why": "A kid runs off to live in a hollowed-out tree with a falcon — the self-reliance daydream rendered in loving practical detail.",
+    "isbn": "9780333345092",
+    "coverId": 108669,
+    "year": 1959
+  },
+  {
+    "id": "big-red",
+    "t": "Big Red",
+    "a": "Jim Kjelgaard",
+    "g": "Literary",
+    "s": [
+      "Adventure & Survival",
+      "Classic"
+    ],
+    "b": [],
+    "why": "A boy, an Irish setter, and the north woods — the first of the Red books and the one that hooked you.",
+    "isbn": "9780812419597",
+    "coverId": 9583465,
+    "year": 1945
+  },
+  {
+    "id": "irish-red-son-of-big-red",
+    "t": "Irish Red: Son of Big Red",
+    "a": "Jim Kjelgaard",
+    "g": "Literary",
+    "s": [
+      "Adventure & Survival",
+      "Classic"
+    ],
+    "b": [],
+    "why": "The runt of the litter proves himself in the field — Kjelgaard doing what he does best, dogs and wild country.",
+    "isbn": "9780606007146",
+    "coverId": 7285860,
+    "year": 1951
+  },
+  {
+    "id": "outlaw-red-son-of-big-red",
+    "t": "Outlaw Red: Son of Big Red",
+    "a": "Jim Kjelgaard",
+    "g": "Literary",
+    "s": [
+      "Adventure & Survival",
+      "Classic"
+    ],
+    "b": [],
+    "why": "A champion setter goes feral and survives the wilderness alone — the third Red book and the wildest.",
+    "year": 1953,
+    "noIsbn": true
+  },
+  {
+    "id": "follow-my-leader",
+    "t": "Follow My Leader",
+    "a": "James B. Garfield",
+    "g": "Literary",
+    "s": [
+      "Classic"
+    ],
+    "b": [],
+    "why": "A boy blinded by a firecracker learns to trust a guide dog named Leader — quietly formative.",
+    "isbn": "9780140364859",
+    "coverId": 102041,
+    "year": 1957
+  },
+  {
+    "id": "little-lord-fauntleroy",
+    "t": "Little Lord Fauntleroy",
+    "a": "Frances Hodgson Burnett",
+    "g": "Literary",
+    "s": [
+      "Classic"
+    ],
+    "b": [],
+    "why": "A good-hearted American boy thaws a flinty English earl — sentimental in the best Victorian way.",
+    "isbn": "9798549875449",
+    "coverId": 29376,
+    "year": 1886
+  },
+  {
+    "id": "pollyanna",
+    "t": "Pollyanna",
+    "a": "Eleanor H. Porter",
+    "g": "Literary",
+    "s": [
+      "Classic"
+    ],
+    "b": [],
+    "why": "The Glad Game — relentless optimism that somehow earns its name rather than just preaching it.",
+    "isbn": "9781421889276",
+    "coverId": 902113,
+    "year": 1913
+  },
+  {
+    "id": "anne-of-green-gables",
+    "t": "Anne of Green Gables",
+    "a": "L. M. Montgomery",
+    "g": "Literary",
+    "s": [
+      "Classic"
+    ],
+    "b": [],
+    "why": "A red-headed orphan talks her way into Avonlea and never stops — the original chatterbox heroine.",
+    "isbn": "9781613822494",
+    "coverId": 14641084,
+    "year": 1908
+  },
+  {
+    "id": "the-giver",
+    "t": "The Giver",
+    "a": "Lois Lowry",
+    "g": "SFF",
+    "s": [
+      "Philosophical SF",
+      "Classic"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "The first dystopia that landed — a sameness so gentle you only feel the horror when the color bleeds in.",
+    "isbn": "9780613047920",
+    "coverId": 8352502,
+    "year": 1993
+  },
+  {
+    "id": "a-wrinkle-in-time",
+    "t": "A Wrinkle in Time",
+    "a": "Madeleine L'Engle",
+    "g": "SFF",
+    "s": [
+      "Portal Fantasy",
+      "Classic"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "Tesseracts, a dark planet, and love as the weapon against IT — sci-fi and faith braided together for kids.",
+    "isbn": "9780821925324",
+    "coverId": 8709146,
+    "year": 1962
+  },
+  {
+    "id": "a-wind-in-the-door",
+    "t": "A Wind in the Door",
+    "a": "Madeleine L'Engle",
+    "g": "SFF",
+    "s": [
+      "Portal Fantasy",
+      "Classic"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "Time Quintet two — cherubim, mitochondria, and Naming as the antidote to un-being.",
+    "isbn": "9780738305868",
+    "coverId": 8276481,
+    "year": 1973
+  },
+  {
+    "id": "a-swiftly-tilting-planet",
+    "t": "A Swiftly Tilting Planet",
+    "a": "Madeleine L'Engle",
+    "g": "SFF",
+    "s": [
+      "Portal Fantasy",
+      "Classic"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "A unicorn, a rune, and history rewritten to avert nuclear war — the most ambitious of the quartet.",
+    "isbn": "9780613721905",
+    "coverId": 8223424,
+    "year": 1978
+  },
+  {
+    "id": "many-waters",
+    "t": "Many Waters",
+    "a": "Madeleine L'Engle",
+    "g": "SFF",
+    "s": [
+      "Portal Fantasy",
+      "Classic"
+    ],
+    "b": [
+      "Sci-Fi × Literary"
+    ],
+    "why": "The Murry twins land in Noah’s desert before the flood — the odd, sun-baked outlier of the set.",
+    "isbn": "9786075277479",
+    "coverId": 6536498,
+    "year": 1986
+  },
+  {
+    "id": "a-walk-in-the-woods",
+    "t": "A Walk in the Woods",
+    "a": "Bill Bryson",
+    "g": "Nonfiction",
+    "s": [
+      "Narrative Nonfiction",
+      "Adventure & Survival"
+    ],
+    "b": [],
+    "why": "Bryson fails to hike the Appalachian Trail and turns the failure into the funniest natural history you'll read.",
+    "isbn": "9780786215133",
+    "year": 1997
+  },
+  {
+    "id": "the-hitchhikers-guide-to-the-galaxy",
+    "t": "The Hitchhiker's Guide to the Galaxy",
+    "a": "Douglas Adams",
+    "g": "SFF",
+    "s": [
+      "Space Opera"
+    ],
+    "b": [
+      "Sci-Fi × Humor"
+    ],
+    "why": "Towels, Vogon poetry, and 42 — the comic galaxy romp, pure weightless fun.",
+    "isbn": "9780330302043",
+    "year": 1979
+  },
+  {
+    "id": "of-mice-and-men",
+    "t": "Of Mice and Men",
+    "a": "John Steinbeck",
+    "g": "Literary",
+    "s": [
+      "Literary",
+      "Historical Fiction"
+    ],
+    "b": [],
+    "why": "Steinbeck's lean Depression-era tragedy — two drifters and one impossible dream of a little place of their own.",
+    "isbn": "9781517444853",
+    "year": 1937
+  },
+  {
+    "id": "green-thumb",
+    "t": "Green Thumb",
+    "a": "Rob Thomas",
+    "g": "Literary",
+    "s": [
+      "Adventure & Survival"
+    ],
+    "b": [],
+    "why": "A teen botany prodigy wins a trip into the Amazon and stumbles onto a mad-scientist plot in the canopy — early Rob Thomas (yes, the Veronica Mars one) doing kid-eco-thriller.",
+    "isbn": "9780689828867",
+    "coverId": 434685,
+    "year": 1999
+  }
+]

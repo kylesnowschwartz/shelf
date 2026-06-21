@@ -1,0 +1,4 @@
+node_modules/
+# Generated artifacts + the z-lib browser session (cookies/localStorage).
+# Never commit these — they're machine-local and the session is sensitive.
+.cache/
