@@ -28,6 +28,12 @@ website (`kylesnowschwartz.github.io/src/data/books.json`) — set `$SHELF_WEBSI
 `--to <website-dir>` if it isn't the conventional sibling path — then commit it in the website
 repo to deploy "The House". The website copy is derived — never edit it directly.
 
+**Write commands run against the canonical clone, not a cache.** `add`/`enrich`/`export`
+mutate `data/books.json`. If this plugin was installed from a *remote* marketplace it lives
+in `~/.claude/plugins/` and is wiped on update — an `add` there is lost. So run write commands
+from Kyle's dev clone (`/Users/kyle/Code/my-projects/shelf`); `recommend`/`retrieve` are
+read-only and safe from any install.
+
 ## Route the request
 
 | If Kyle wants… | Job | Command | Section |

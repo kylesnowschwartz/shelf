@@ -17,6 +17,15 @@ This repo is also a **Claude Code plugin** (and its own single-plugin marketplac
 and `bin/shelf` (a bare `shelf` command that bootstraps node deps on first run, then runs the
 engine). Install with `/plugin marketplace add kylesnowschwartz/shelf` → `/plugin install shelf@shelf`.
 
+> **Owner workflow — where the data lives.** This repo OWNS `data/books.json`, so write
+> commands (`add`, `enrich`) and `export` MUST run against this canonical clone — never a
+> cached plugin copy. Installing the plugin from the **remote** marketplace copies it under
+> `~/.claude/plugins/`, and a cached copy is wiped on plugin update — so an `add` run there is
+> silently lost. As the maintainer, either add the marketplace by **local path**
+> (`/plugin marketplace add /Users/kyle/Code/my-projects/shelf`) so the plugin *is* this clone,
+> or treat a remote install as read-only (recommend / retrieve) and run `add`/`export` from
+> here. The recommend/retrieve commands are read-only and safe to run from any install.
+
 | Path | What |
 |------|------|
 | `.claude-plugin/` | plugin + marketplace manifests (distributes this repo as a CC plugin) |
