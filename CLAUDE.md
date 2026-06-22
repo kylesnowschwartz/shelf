@@ -5,17 +5,26 @@ fetches unread candidate books, embeds them locally (MiniLM), and ranks them aga
 read shelf with diversity + calibration re-ranking. It never parses or writes prose; that
 is the calling agent's job. Output is `--json`-primary. No API keys, ever.
 
-This repo also **owns the reading-list data** (`data/books.json`) and the pure ranking
-model (`src/recommend.ts`). The personal website `kylesnowschwartz.github.io` renders a
-committed copy of both, kept in sync by `shelf export` (one-way: shelf → website).
+This repo also **owns the reading-list data** (`data/books.json`). The personal website
+`kylesnowschwartz.github.io` renders a committed copy of it, kept in sync by `shelf export`
+(one-way: shelf → website). The ranking model (`src/recommend.ts`) is internal to this
+engine — the website never used it, so it is not exported.
 
 ## Layout
 
+This repo is also a **Claude Code plugin** (and its own single-plugin marketplace):
+`.claude-plugin/{plugin.json,marketplace.json}`, the agent driver in `skills/shelf-skill/`,
+and `bin/shelf` (a bare `shelf` command that bootstraps node deps on first run, then runs the
+engine). Install with `/plugin marketplace add kylesnowschwartz/shelf` → `/plugin install shelf@shelf`.
+
 | Path | What |
 |------|------|
+| `.claude-plugin/` | plugin + marketplace manifests (distributes this repo as a CC plugin) |
+| `skills/shelf-skill/SKILL.md` | the agent driver (recommend / retrieve / add / maintain) |
+| `bin/shelf` | bare `shelf` command; first-run `npm install`, then `node shelf.mjs` |
 | `shelf.mjs` | CLI entry (commander); lazy-loads each command from `src/` |
 | `src/cmd-*.mjs` | one file per command (fetch, add, enrich, embed, build, next, profile, export, retrieve, zlib-login) |
-| `src/recommend.ts` | pure, dependency-free ranking model (canonical home; exported to the website) |
+| `src/recommend.ts` | pure, dependency-free ranking model (internal to the engine; build/next/profile) |
 | `src/books-io.mjs` | the single books.json read/write/serialize point |
 | `src/paths.mjs` | the single source of truth for all file locations |
 | `src/genres.mjs` | the canonical genre vocabulary (must match the website's Zod `z.enum`) |

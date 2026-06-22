@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# shelf launcher — the bare `shelf` command this plugin exposes.
+#
+# A Claude Code plugin is not an npm package: installing it does NOT run
+# `npm install`. The engine needs node deps (commander, @xenova/transformers),
+# so we bootstrap them once on first run, then hand off to the Node CLI.
+#
+# Resolves the engine root from $CLAUDE_PLUGIN_ROOT when run as an installed
+# plugin, or from this script's location when run straight out of a dev clone.
+set -euo pipefail
+
+ROOT="${CLAUDE_PLUGIN_ROOT:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"}"
+
+if [ ! -d "$ROOT/node_modules" ]; then
+  echo "shelf: first run — installing engine dependencies (one time)…" >&2
+  (cd "$ROOT" && npm install --omit=dev) >&2
+fi
+
+exec node "$ROOT/shelf.mjs" "$@"

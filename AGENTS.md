@@ -44,10 +44,10 @@ npm run shelf -- export --to ../path/to/website  # explicit target (or set $SHEL
 npm run shelf -- export --dry-run --json         # show what would be written
 ```
 
-`export` writes `books.json` (byte-identical via the shared serializer) and the pure
-ranking model `recommend.ts` into the website's `src/data/` and `src/lib/`. Then commit
-the synced files in the website repo to deploy. One-way only (shelf → website); never
-hand-edit the website's copy — the next `export` overwrites it.
+`export` writes `books.json` (byte-identical via the shared serializer) into the website's
+`src/data/`. Then commit the synced file in the website repo to deploy. One-way only
+(shelf → website); never hand-edit the website's copy — the next `export` overwrites it.
+The ranking model (`recommend.ts`) is internal to this engine and is NOT exported.
 
 On a fresh clone, run `fetch → embed → build` before `next`; the candidates,
 recommendations, and embedding cache are generated in `.cache/` and git-ignored.

@@ -1,0 +1,12 @@
+{
+  "name": "shelf",
+  "version": "0.1.0",
+  "description": "Kyle's reading library + deterministic, keyless book-recommendation engine. Recommend, retrieve, add, and maintain books; drives the local shelf CLI.",
+  "author": {
+    "name": "Kyle Snow Schwartz",
+    "url": "https://github.com/kylesnowschwartz"
+  },
+  "repository": "https://github.com/kylesnowschwartz/shelf",
+  "license": "MIT",
+  "keywords": ["books", "reading", "recommendations", "cli", "embeddings"]
+}

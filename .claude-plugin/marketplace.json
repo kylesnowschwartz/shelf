@@ -1,0 +1,21 @@
+{
+  "name": "shelf",
+  "owner": {
+    "name": "Kyle Snow Schwartz",
+    "url": "https://github.com/kylesnowschwartz"
+  },
+  "metadata": {
+    "description": "Kyle's shelf — reading library + book-recommendation engine, distributed as a single self-contained plugin.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "shelf",
+      "source": ".",
+      "description": "Reading library + deterministic book recommender (recommend / retrieve / add / maintain). Bundles the shelf CLI via bin/shelf.",
+      "version": "0.1.0",
+      "category": "productivity",
+      "keywords": ["books", "reading", "recommendations"]
+    }
+  ]
+}

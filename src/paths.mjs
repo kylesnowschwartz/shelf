@@ -8,9 +8,6 @@ export const ROOT = join(here, '..'); // shelf repo root
 export const DATA = join(ROOT, 'data');
 export const CACHE = join(ROOT, '.cache');
 export const BOOKS_JSON = join(DATA, 'books.json');
-// The pure ranking model — shelf owns the canonical copy; `shelf export` syncs
-// it into consumer checkouts alongside books.json.
-export const RECOMMEND_TS = join(here, 'recommend.ts');
 export const CANDIDATES_JSON = join(CACHE, 'candidates.json');
 export const RECOMMENDATIONS_JSON = join(CACHE, 'recommendations.json');
 export const EMBED_CACHE = join(CACHE, 'embeddings');
