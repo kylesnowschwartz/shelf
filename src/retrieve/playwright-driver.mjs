@@ -1,4 +1,11 @@
-// Browser-driven download path for the z-lib source backend.
+// Browser-driven download path for the z-lib source backend — the FALLBACK.
+//
+// As of zlib v0.0.5 the Go binary downloads directly (the HTTP 204 bug was a
+// decoy `/dl/` href, now fixed — see sources/zlib.mjs). This driver is no
+// longer the primary path; `download()` reaches for it only when the binary
+// fails. It remains valuable because it authenticates against an INDEPENDENT
+// session (its own persistent profile, vs the binary's ~/.config/zlib), and
+// because a real browser survives anti-bot tightening the Go client can't.
 //
 // Wraps `playwright-cli` to drive a real Chromium session through z-lib's
 // download UI, capture Playwright's `download` event, and write the file to a
@@ -6,12 +13,10 @@
 // this file — it sees the same `source.download` interface as before, with the
 // bytes arriving via a real browser instead of a Go HTTP client.
 //
-// Why a real browser: z-lib's `/dl/<token>` endpoint serves files only to
-// service-worker-initiated fetches with browser-class TLS and full
+// Why a real browser still earns its keep: z-lib's `/dl/<token>` endpoint can
+// gate on service-worker-initiated fetches with browser-class TLS and the full
 // Cloudflare-required header set. Driving the actual UI bypasses every
-// fingerprinting layer because the request *is* a real browser. The full
-// debugging history lives in the dry-run summary; the upshot is: the cheapest
-// solution that works is the right one.
+// fingerprinting layer because the request *is* a real browser.
 //
 // Lifecycle (the persistent profile is the load-bearing piece):
 //   - Session name "zlib", persistent profile (Chrome user-data-dir survives

@@ -1,14 +1,25 @@
-// Source backend: z-lib via a hybrid transport.
+// Source backend: z-lib via a binary-first transport with a browser fallback.
 //
-//   search()   → shells out to the `zlib` Go binary (heartleo fork, --json
-//                patches at v0.0.4+1). The HTML page endpoint z-lib uses for
-//                search is lenient on client fingerprints — a headless Go
-//                client gets clean JSON back, fast.
+//   search()   → shells out to the `zlib` Go binary (heartleo fork, --json,
+//                v0.0.5+). The HTML page endpoint z-lib uses for search is
+//                lenient on client fingerprints — a headless Go client gets
+//                clean JSON back, fast.
 //
-//   download() → drives a persistent Playwright Chromium session through
-//                z-lib's actual download UI. The `/dl/<token>` endpoint
-//                refuses non-browser clients; the only thing that survives
-//                its anti-bot is a real browser. See playwright-driver.mjs.
+//   download() → tries the SAME binary first (`zlib download <id> --json`).
+//                v0.0.5 fixed the long-standing HTTP 204 bug: the binary now
+//                resolves the real `/dl/` URL from the page's inline script
+//                instead of the decoy href, so the Go HTTP client downloads
+//                directly — no browser needed. See heartleo/zlib issue #4.
+//
+//                On ANY binary failure except a genuine SOURCE_NOT_FOUND, it
+//                falls back to a persistent Playwright Chromium session
+//                (playwright-driver.mjs). The two paths authenticate against
+//                INDEPENDENT session stores — the binary uses
+//                ~/.config/zlib/session.json (refreshed by `zlib login`); the
+//                browser uses its own persistent profile (refreshed by
+//                `shelf zlib-login`). A download only truly fails when BOTH
+//                sessions are dead, which is the only time the caller sees
+//                SOURCE_AUTH_REQUIRED.
 //
 // This file is the ONLY place in shelf that knows about z-lib. Everything
 // upstream sees opaque `sourceId` strings ("zlib:r9bkkbjyzB") and generic
@@ -107,10 +118,11 @@ function runBinary(bin, args, { env = process.env, signal } = {}) {
 
 // Classify a non-zero exit into the generic error vocabulary. The stderr
 // inspection looks for stable substrings that heartleo's `formatCLIError`
-// produces (see internal/cli/root.go). Only triggers downstream of `runBinary`,
-// which is now invoked only by search() — download-time error strings
-// ("no download url") that the binary's download path used to emit are no
-// longer relevant since download routes through the Playwright driver.
+// produces (see internal/cli/root.go). Invoked by both search() and the
+// binary download path: download failures the binary emits ("no download URL
+// available", "download failed: HTTP 204", redirect overflow) have no
+// dedicated branch here, so they fall through to the SOURCE_UNAVAILABLE
+// default — which is exactly what makes download() fall back to the browser.
 function classifyExit(code, stderr, { stdout = '' } = {}) {
   const blob = `${stderr}\n${stdout}`.toLowerCase();
   if (blob.includes('not logged in') || blob.includes('session expired')) {
@@ -184,25 +196,78 @@ export async function search(opts = {}) {
 /**
  * Download a previously-found candidate by its opaque sourceId.
  *
- * Routes through the persistent Playwright session (see playwright-driver.mjs).
- * The destination directory must already exist. Returns the absolute path
- * to the written file.
+ * Tries the zlib binary first; falls back to the persistent Playwright session
+ * on any binary failure except SOURCE_NOT_FOUND (a genuine "no copy exists" —
+ * the browser can't conjure one either). The two transports authenticate
+ * against independent sessions, so the fallback covers the case where the
+ * binary's session has expired but the browser's has not. The destination
+ * directory must already exist. Returns the absolute path to the written file,
+ * tagged with the `transport` that delivered it.
  *
  * @param {{
  *   sourceId: string,                // 'zlib:<book-id>'
  *   destDir: string,
  *   signal?: AbortSignal,
+ *   bin?: string,                    // zlib binary override (tests)
+ *   env?: object,                    // env override (tests)
  *   pwBin?: string,                  // playwright-cli override (tests)
  *   pwRunner?: Function,             // DI seam: bypass spawn (tests)
  *   pwSessionName?: string,          // default 'zlib'
  * }} opts
- * @returns {Promise<{ path: string, sizeBytes: number, format: string|null, name: string|null }>}
+ * @returns {Promise<{ path: string, sizeBytes: number|null, format: string|null, name: string|null, transport: 'binary'|'browser' }>}
  */
 export async function download(opts = {}) {
   if (!opts.sourceId) throw new SourceError('SOURCE_BIN_MISSING', 'download requires sourceId');
   if (!opts.destDir) throw new SourceError('SOURCE_BIN_MISSING', 'download requires destDir');
   const id = parseSourceId(opts.sourceId);
 
+  try {
+    return await downloadViaBinary({ id, destDir: opts.destDir, bin: opts.bin, env: opts.env, signal: opts.signal });
+  } catch (err) {
+    // A genuine "no copy exists" won't be cured by switching transports, and
+    // the binary's precise reason is worth preserving — don't fall back.
+    if (err instanceof SourceError && err.code === 'SOURCE_NOT_FOUND') throw err;
+    // Every other binary failure (HTTP 204, transport, auth, missing binary)
+    // → try the browser, whose independent session may still be alive.
+    return await downloadViaBrowserSession(id, opts);
+  }
+}
+
+/**
+ * Primary download path: the zlib binary's own `download --json`. Reuses the
+ * runBinary + classifyExit plumbing search() uses, so binary failures arrive
+ * as SourceErrors the caller can branch on.
+ */
+async function downloadViaBinary({ id, destDir, bin, env, signal }) {
+  const resolvedBin = bin ?? resolveBinary({ env });
+  const args = ['download', id, '--json', '--dir', destDir];
+  const { stdout } = await runBinary(resolvedBin, args, { env, signal });
+  let payload;
+  try {
+    payload = JSON.parse(stdout);
+  } catch (err) {
+    throw new SourceError('SOURCE_UNAVAILABLE', 'source emitted invalid JSON on download', { cause: err });
+  }
+  if (!payload || typeof payload.path !== 'string' || !payload.path) {
+    throw new SourceError('SOURCE_UNAVAILABLE', 'source download produced no file path');
+  }
+  return {
+    path: payload.path,
+    sizeBytes: Number.isFinite(Number(payload.size)) ? Number(payload.size) : null,
+    format: extractFormat(payload.path),
+    // The binary's JSON `name` is already the clean book title — no marketing
+    // suffix to strip (unlike the browser's suggestedFilename below).
+    name: payload.name || null,
+    transport: 'binary',
+  };
+}
+
+/**
+ * Fallback download path: drive the persistent Playwright session. Translates
+ * the browser driver's error vocabulary into SourceErrors so the caller sees a
+ * uniform contract regardless of which transport ran.
+ */
+async function downloadViaBrowserSession(id, opts) {
   let result;
   try {
     result = await downloadViaBrowser({
@@ -229,6 +294,7 @@ export async function download(opts = {}) {
     // includes z-lib's marketing suffix (" (z-library.sk, 1lib.sk, ...)");
     // strip it back to the title proper.
     name: titleFromSuggestedFilename(result.suggestedFilename),
+    transport: 'browser',
   };
 }
 

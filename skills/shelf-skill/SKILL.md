@@ -166,19 +166,34 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
 5. **Never name the backend.** Say "your copy", "the source", "the best edition",
    "delivered to your Kindle" — never the library/site/binary it came from.
 
-### Auth lifecycle (the one new mechanic since you last read this)
+### Auth lifecycle (two independent sessions, binary-first)
 
-Downloads run through a persistent Chromium session named `zlib` whose cookies last
-~30 days. When they expire, `retrieve` exits `5` with `"sourceCode": "SOURCE_AUTH_REQUIRED"`.
-Tell Kyle plainly and offer the one-shot fix:
+`retrieve` downloads via **two transports with independent logins**, and tries them in
+order:
+
+1. **Binary (primary).** The `zlib` Go binary downloads directly. Its session lives in
+   `~/.config/zlib/session.json` and is refreshed *outside shelf* by running `zlib login`
+   directly (email/password). shelf does not manage this login.
+2. **Browser (fallback).** If the binary fails for any reason, `retrieve` falls back to a
+   persistent Chromium session whose cookies last ~30 days, refreshed by `shelf zlib-login`.
+
+The result JSON reports which one delivered via `"transport": "binary" | "browser"`.
+Because the two sessions are independent, a download succeeds as long as **either** is
+alive — so `retrieve` only exits `5` with `"sourceCode": "SOURCE_AUTH_REQUIRED"` when
+**both** have expired.
+
+When that happens, tell Kyle plainly and offer both refreshes — the browser one is the
+in-shelf one-shot:
 
 ```bash
 shelf zlib-login   # opens a headed browser; Kyle signs in, you wait
+# and/or, outside shelf, to refresh the primary path:
+zlib login
 ```
 
-The command polls cookies, saves state to `.cache/zlib-state.json` (gitignored), closes
-the window, and emits a success JSON when done. After that, retry the failed retrieve.
-Default timeout is 5 minutes; bump with `--timeout 600` if needed.
+`shelf zlib-login` polls cookies, saves state to `.cache/zlib-state.json` (gitignored),
+closes the window, and emits a success JSON when done. After either refresh, retry the
+failed retrieve. Default timeout is 5 minutes; bump with `--timeout 600` if needed.
 
 **Don't run `zlib-login` proactively.** It needs human interaction and a visible window;
 only invoke it when `retrieve` has explicitly said auth expired.

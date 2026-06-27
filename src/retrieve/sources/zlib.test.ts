@@ -157,12 +157,11 @@ function writeFakeBinary(dir: string, name: string, body: string) {
   return path;
 }
 
-// Fake binary for the search tests below. `download` is intentionally NOT
-// stubbed: the source backend's download() routes through the Playwright
-// driver (mocked separately via pwRunner injection), so any accidental
-// re-introduction of a binary-spawn download path would surface as a
-// runtime error from this fake's `unknown subcommand` branch.
-const SEARCH_FAKE = `
+// Fake binary for the binary-path tests below. Handles both `search` and
+// `download` (download is now the primary transport — see sources/zlib.mjs).
+// Behavior is steered by FAKE_* env flags so a single fake covers the success,
+// auth-failure, and transport-failure cases.
+const FAKE = `
 const sub = process.argv[2];
 const argv = process.argv.slice(3);
 if (sub === 'search') {
@@ -190,6 +189,27 @@ if (sub === 'search') {
   }));
   process.exit(0);
 }
+if (sub === 'download') {
+  const id = argv[0];
+  let dir = '.';
+  for (let i = 1; i < argv.length - 1; i++) {
+    if (argv[i] === '--dir') dir = argv[i + 1];
+  }
+  if (process.env.FAKE_AUTH === '1') {
+    process.stderr.write('session expired\\n');
+    process.exit(1);
+  }
+  if (process.env.FAKE_DL_204 === '1') {
+    process.stderr.write('download failed: HTTP 204\\n');
+    process.exit(1);
+  }
+  const path = require('node:path');
+  const fs = require('node:fs');
+  const dest = path.join(dir, 'The Fake Book.epub');
+  fs.writeFileSync(dest, Buffer.alloc(12345, 0));
+  console.log(JSON.stringify({ id, name: 'The Fake Book', path: dest, size: 12345 }));
+  process.exit(0);
+}
 process.stderr.write('unknown subcommand: ' + sub + '\\n');
 process.exit(2);
 `;
@@ -199,7 +219,7 @@ let fakeBin: string;
 
 beforeAll(() => {
   tmpRoot = mkdtempSync(join(tmpdir(), 'shelf-retrieve-test-'));
-  fakeBin = writeFakeBinary(tmpRoot, 'zlib-fake', SEARCH_FAKE);
+  fakeBin = writeFakeBinary(tmpRoot, 'zlib-fake', FAKE);
 });
 
 afterAll(() => {
@@ -285,7 +305,12 @@ function fakePwRunner(suggestedFilename: string, savedAt: string) {
   };
 }
 
-describe('download (browser driver)', () => {
+// A binary path guaranteed not to exist, so download() fails the binary attempt
+// (→ SOURCE_BIN_MISSING, which is not NOT_FOUND) and falls back to the browser.
+// This is how the browser-fallback tests below force the secondary transport.
+const MISSING_BIN = '/nope/zlib-does-not-exist';
+
+describe('download (browser driver — fallback path)', () => {
   it('returns the saved path, sized from disk, with format extracted from the filename', async () => {
     const dest = mkdtempSync(join(tmpdir(), 'shelf-deliver-test-'));
     try {
@@ -295,6 +320,7 @@ describe('download (browser driver)', () => {
       const res = await download({
         sourceId: 'zlib:r9bkkbjyzB',
         destDir: dest,
+        bin: MISSING_BIN,
         pwRunner: fakePwRunner(filename, savedAt),
       });
       expect(res.path).toBe(savedAt);
@@ -302,6 +328,7 @@ describe('download (browser driver)', () => {
       expect(res.format).toBe('azw3');
       // titleFromSuggestedFilename strips the z-lib marketing parenthetical.
       expect(res.name).toBe('Brian Robeson - 01 - Hatchet (Gary Paulsen)');
+      expect(res.transport).toBe('browser');
     } finally {
       rmSync(dest, { recursive: true, force: true });
     }
@@ -323,7 +350,7 @@ describe('download (browser driver)', () => {
         throw new Error('runner reached past auth probe');
       };
       await expect(
-        download({ sourceId: 'zlib:abc', destDir: dest, pwRunner: runner }),
+        download({ sourceId: 'zlib:abc', destDir: dest, bin: MISSING_BIN, pwRunner: runner }),
       ).rejects.toMatchObject({ code: 'SOURCE_AUTH_REQUIRED' });
     } finally {
       rmSync(dest, { recursive: true, force: true });
@@ -333,9 +360,10 @@ describe('download (browser driver)', () => {
   it('translates PW_NOT_INSTALLED into SOURCE_BIN_MISSING', async () => {
     const dest = mkdtempSync(join(tmpdir(), 'shelf-deliver-test-'));
     try {
-      // Real spawn against an impossible playwright-cli binary.
+      // Real spawn against an impossible playwright-cli binary (binary path also
+      // missing, so both transports fail and the browser's error surfaces).
       await expect(
-        download({ sourceId: 'zlib:abc', destDir: dest, pwBin: '/nope/playwright-cli' }),
+        download({ sourceId: 'zlib:abc', destDir: dest, bin: MISSING_BIN, pwBin: '/nope/playwright-cli' }),
       ).rejects.toMatchObject({ code: 'SOURCE_BIN_MISSING' });
     } finally {
       rmSync(dest, { recursive: true, force: true });
@@ -365,11 +393,73 @@ describe('download (browser driver)', () => {
         throw new Error(`fake runner: unhandled ${JSON.stringify(args)}`);
       };
       await expect(
-        download({ sourceId: 'zlib:pqxgMr3aze', destDir: dest, pwRunner: runner }),
+        download({ sourceId: 'zlib:pqxgMr3aze', destDir: dest, bin: MISSING_BIN, pwRunner: runner }),
       ).rejects.toMatchObject({
         code: 'SOURCE_NOT_FOUND',
         message: expect.stringContaining('copyright holder'),
       });
+    } finally {
+      rmSync(dest, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('download (binary primary)', () => {
+  it('downloads via the binary and does NOT touch the browser', async () => {
+    const dest = mkdtempSync(join(tmpdir(), 'shelf-deliver-test-'));
+    try {
+      // pwRunner throws if reached — proves the binary path short-circuits.
+      const pwRunner = async () => {
+        throw new Error('browser fallback should not have been invoked');
+      };
+      const res = await download({ sourceId: 'zlib:bin-1', destDir: dest, bin: fakeBin, pwRunner });
+      expect(res.transport).toBe('binary');
+      expect(res.name).toBe('The Fake Book');
+      expect(res.format).toBe('epub');
+      expect(res.sizeBytes).toBe(12345);
+      expect(res.path).toBe(join(dest, 'The Fake Book.epub'));
+    } finally {
+      rmSync(dest, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to the browser when the binary 204s', async () => {
+    const dest = mkdtempSync(join(tmpdir(), 'shelf-deliver-test-'));
+    try {
+      const filename = 'Fallback Book (z-library.sk).epub';
+      const savedAt = join(dest, filename);
+      writeFileSync(savedAt, Buffer.alloc(2048, 0));
+      const res = await download({
+        sourceId: 'zlib:bin-2',
+        destDir: dest,
+        bin: fakeBin,
+        env: { ...process.env, FAKE_DL_204: '1' },
+        pwRunner: fakePwRunner(filename, savedAt),
+      });
+      expect(res.transport).toBe('browser');
+      expect(res.path).toBe(savedAt);
+      expect(res.name).toBe('Fallback Book');
+    } finally {
+      rmSync(dest, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to the browser when the binary session is expired (auth)', async () => {
+    const dest = mkdtempSync(join(tmpdir(), 'shelf-deliver-test-'));
+    try {
+      const filename = 'Auth Fallback.epub';
+      const savedAt = join(dest, filename);
+      writeFileSync(savedAt, Buffer.alloc(4096, 0));
+      const res = await download({
+        sourceId: 'zlib:bin-3',
+        destDir: dest,
+        bin: fakeBin,
+        env: { ...process.env, FAKE_AUTH: '1' },
+        pwRunner: fakePwRunner(filename, savedAt),
+      });
+      // Independent sessions: binary auth dead, browser alive → still succeeds.
+      expect(res.transport).toBe('browser');
+      expect(res.path).toBe(savedAt);
     } finally {
       rmSync(dest, { recursive: true, force: true });
     }

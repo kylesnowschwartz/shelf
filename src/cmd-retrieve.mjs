@@ -119,6 +119,7 @@ export async function run(opts /*, command */) {
   try {
     log(`source: downloading ${picked.sourceId}`);
     downloaded = await source.download({ sourceId: picked.sourceId, destDir: stagingDir });
+    log(`source: downloaded via ${downloaded.transport}`);
   } catch (err) {
     await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
     handleSourceError(err);
@@ -146,6 +147,7 @@ export async function run(opts /*, command */) {
       kind: delivered.kind, // 'kindle' | 'downloads' | 'override'
       format: delivered.format,
       sizeBytes: delivered.sizeBytes,
+      transport: downloaded.transport, // 'binary' | 'browser' — which path delivered
       alternatives,
       omitted,
     },
@@ -279,6 +281,7 @@ async function runSourceIdBypass(source, opts) {
   try {
     log(`source: downloading explicit ${opts.sourceId}`);
     downloaded = await source.download({ sourceId: opts.sourceId, destDir: stagingDir });
+    log(`source: downloaded via ${downloaded.transport}`);
   } catch (err) {
     await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
     handleSourceError(err);
@@ -307,6 +310,7 @@ async function runSourceIdBypass(source, opts) {
       kind: delivered.kind,
       format: delivered.format,
       sizeBytes: delivered.sizeBytes,
+      transport: downloaded.transport, // 'binary' | 'browser' — which path delivered
       bypassed: true,
     },
     opts,
