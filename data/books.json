@@ -1907,5 +1907,29 @@
     "isbn": "9780689828867",
     "coverId": 434685,
     "year": 1999
+  },
+  {
+    "id": "dungeon-crawler-carl",
+    "t": "Dungeon Crawler Carl",
+    "a": "Matt Dinniman",
+    "g": "SFF",
+    "s": [],
+    "b": [],
+    "why": "",
+    "isbn": "9780241816271",
+    "coverId": 15143022,
+    "year": 2020
+  },
+  {
+    "id": "the-shadow-of-the-gods",
+    "t": "The Shadow of the Gods",
+    "a": "John Gwynne",
+    "g": "SFF",
+    "s": [],
+    "b": [],
+    "why": "",
+    "isbn": "9781549137952",
+    "coverId": 12380838,
+    "year": 2021
   }
 ]
