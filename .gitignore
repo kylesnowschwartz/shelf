@@ -2,3 +2,8 @@ node_modules/
 # Generated artifacts + the z-lib browser session (cookies/localStorage).
 # Never commit these — they're machine-local and the session is sensitive.
 .cache/
+# Local environment wiring. GOOGLE_BOOKS_API_KEY reaches the engine through
+# direnv, so this file names a credential source and never belongs in the repo.
+.envrc
+# Snapshots and console logs from playwright-cli sessions.
+.playwright-cli/
