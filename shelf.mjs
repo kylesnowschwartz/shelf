@@ -5,7 +5,8 @@
 // locally, and ranks them against your read shelf with diversity + calibration
 // re-ranking. It does NOT interpret natural language and does NOT write prose —
 // that is the job of the Claude Code plugin that drives it. Output is
-// `--json`-primary so an agent can consume it. No API keys, ever.
+// `--json`-primary so an agent can consume it. It runs with no credentials;
+// setting GOOGLE_BOOKS_API_KEY adds Google Books as a second candidate source.
 //
 // Pipeline:  shelf fetch → shelf embed → shelf build → shelf next
 import { Command } from 'commander';

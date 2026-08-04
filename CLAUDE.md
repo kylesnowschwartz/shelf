@@ -1,6 +1,6 @@
 # shelf
 
-`shelf` is a deterministic, keyless reading-recommendation engine — the **picker**. It
+`shelf` is a deterministic reading-recommendation engine — the **picker**. It
 fetches unread candidate books, embeds them locally (MiniLM), and ranks them against a
 read shelf with diversity + calibration re-ranking. It never parses or writes prose; that
 is the calling agent's job. Output is `--json`-primary. It runs with no credentials;
