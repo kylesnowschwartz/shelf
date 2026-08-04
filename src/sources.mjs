@@ -5,7 +5,7 @@
 // plugin's keyless users. Each fetch returns an array of raw candidate
 // records {t,a,year,isbn,pages,subjects,firstSentence,source}.
 import { getJson } from './http.mjs';
-import { pickIsbn13, pickEnglishIsbn13, primaryAuthor, cleanTitle, threeLetterLanguage } from './util.mjs';
+import { pickIsbn13, pickEnglishIsbn13, primaryAuthor, cleanTitle, displayTitle, threeLetterLanguage } from './util.mjs';
 
 const OL = 'https://openlibrary.org/search.json';
 // Open Library's search index routinely takes upwards of 15 seconds to answer
@@ -18,7 +18,7 @@ const OL_FIELDS =
 export function fromOpenLibrary(doc, source) {
   if (!doc?.title || !Array.isArray(doc.author_name) || !doc.author_name.length) return null;
   return {
-    t: doc.title.trim(),
+    t: displayTitle(doc.title),
     a: doc.author_name[0].trim(),
     year: typeof doc.first_publish_year === 'number' ? doc.first_publish_year : undefined,
     isbn: pickIsbn13(doc.isbn),
@@ -65,18 +65,21 @@ const GOOGLE_BOOKS = 'https://www.googleapis.com/books/v1/volumes';
 /**
  * Maps a Google Books `volumeInfo` record onto the shared candidate shape.
  *
- * Google has deprecated user ratings — where `ratingsCount`/`averageRating`
- * are present at all, the counts are single digits (a Stephen King title
- * turning up with a count of 1 or 2), nowhere near Open Library's thousands-
- * of-raters scale. The shared `ratingsCount`/`ratingsAverage` fields feed
- * `passesQualityGate`'s floors. Google's own rating fields reach roughly a
- * tenth of volumes and report single-digit counts where they do — Stephen
- * King's "Misery" comes back with one rating — so they are dropped rather than
- * recorded: too sparse to rank by, and low enough to read a bestseller as
- * under-floor if the gate ever saw them. The gate-relevant fields stay
- * undefined, so a Google candidate passes as unproven, which matches Google's
- * already-curated relevance ordering. `publisher` is the signal Google does
- * carry usefully, and the self-publishing screen uses it.
+ * Google's rating fields reach roughly a tenth of volumes and report
+ * single-digit counts where they do — "Misery" comes back with one rating —
+ * nowhere near the thousands-of-raters scale `passesQualityGate`'s floors are
+ * set against. They are dropped rather than recorded: too sparse to rank by,
+ * and low enough to read a bestseller as under-floor if the gate saw them.
+ * Leaving the gate-relevant fields undefined lets a Google candidate through
+ * as unproven, which matches Google's already-curated relevance ordering.
+ * `publisher` is the signal Google does carry usefully, and the
+ * self-publishing screen uses it.
+ *
+ * `description` is a marketing blurb, not the opening line Open Library's
+ * `first_sentence` gives, but it lands in the same field because it plays the
+ * same role: the descriptive text `embed-model.mjs` embeds alongside the
+ * title and subjects. Without it a Google candidate embeds on its title
+ * alone.
  */
 export function fromGoogleBooks(volumeInfo, source) {
   if (!volumeInfo?.title || !Array.isArray(volumeInfo.authors) || !volumeInfo.authors.length) return null;
@@ -84,13 +87,13 @@ export function fromGoogleBooks(volumeInfo, source) {
     .filter((id) => id.type === 'ISBN_13')
     .map((id) => id.identifier);
   return {
-    t: volumeInfo.title.trim(),
+    t: displayTitle(volumeInfo.title),
     a: volumeInfo.authors[0].trim(),
     year: /^\d{4}/.test(volumeInfo.publishedDate || '') ? Number(volumeInfo.publishedDate.slice(0, 4)) : undefined,
     isbn: pickIsbn13(isbns),
     pages: typeof volumeInfo.pageCount === 'number' ? volumeInfo.pageCount : undefined,
     subjects: Array.isArray(volumeInfo.categories) ? volumeInfo.categories.slice(0, 8) : [],
-    firstSentence: undefined,
+    firstSentence: typeof volumeInfo.description === 'string' ? volumeInfo.description.slice(0, 240) : undefined,
     languages: volumeInfo.language ? [threeLetterLanguage(volumeInfo.language)] : undefined,
     publisher: typeof volumeInfo.publisher === 'string' ? volumeInfo.publisher : undefined,
     ratingsCount: undefined,
@@ -115,6 +118,7 @@ export async function googleBySubject(subject, perQuery, { fetchImpl } = {}) {
     q: `subject:"${subject}"`,
     maxResults: String(Math.min(perQuery, 40)),
     langRestrict: 'en',
+    printType: 'books', // the volumes index also carries magazines
     key,
   });
   const data = await getJson(`${GOOGLE_BOOKS}?${params}`, {

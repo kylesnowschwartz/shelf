@@ -211,3 +211,18 @@ describe('googleBySubject', () => {
     expect(requested.searchParams.get('key')).toBe('dummy-test-key');
   });
 });
+
+describe('fromGoogleBooks descriptive text', () => {
+  it('carries the description so the candidate embeds on more than its title', () => {
+    const c = fromGoogleBooks(
+      { title: 'Daemon', authors: ['Daniel Suarez'], description: 'A dying game designer unleashes a distributed program.' },
+      'googlebooks:subject:thriller',
+    );
+    expect(c.firstSentence).toBe('A dying game designer unleashes a distributed program.');
+  });
+
+  it('leaves the field undefined when the volume has no description', () => {
+    const c = fromGoogleBooks({ title: 'Daemon', authors: ['Daniel Suarez'] }, 'googlebooks:subject:thriller');
+    expect(c.firstSentence).toBeUndefined();
+  });
+});
