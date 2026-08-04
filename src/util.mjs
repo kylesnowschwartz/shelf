@@ -1,8 +1,26 @@
 // Small pure string helpers shared across shelf commands. Deterministic — no
 // I/O, no randomness — so the whole pipeline gives stable output for an agent.
 
-/** Strip "(Thrawn 1)"-style qualifiers. */
-export const cleanTitle = (t) => t.replace(/\([^)]*\)/g, '').trim();
+/**
+ * Strip "(Thrawn 1)"-style qualifiers. Catalog titles sometimes carry a
+ * parenthetical that is never closed ("A Wind in the Door (Time Quintet #2"),
+ * so an opening paren with no partner also takes the rest of the title with
+ * it — otherwise the stray series note survives into the dedup key and a book
+ * already on the read shelf reads as a new one.
+ */
+export const cleanTitle = (t) =>
+  t
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\([^)]*$/, '')
+    .trim();
+
+/**
+ * A title fit to show a reader. A closed parenthetical is kept, because
+ * "(Time Quintet #2)" tells them where the book sits in a series; an
+ * unterminated one is the catalog's own truncation and reads as damage, so it
+ * goes.
+ */
+export const displayTitle = (t) => t.replace(/\s*\([^)]*$/, '').trim();
 
 /** First listed author, for matching ("A & B" / "A, B" → "A"). */
 export const primaryAuthor = (a) => a.split(/ & |, | and /i)[0].trim();
