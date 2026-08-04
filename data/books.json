@@ -1931,5 +1931,50 @@
     "isbn": "9781549137952",
     "coverId": 12380838,
     "year": 2021
+  },
+  {
+    "id": "the-girl-with-the-dragon-tattoo",
+    "t": "The Girl with the Dragon Tattoo",
+    "a": "Stieg Larsson",
+    "g": "Thriller",
+    "s": [
+      "Nordic Noir",
+      "Crime"
+    ],
+    "b": [],
+    "why": "Millennium 1 — the Vanger cold case that introduces Salander.",
+    "isbn": "9781415957806",
+    "coverId": 9274740,
+    "year": 2005
+  },
+  {
+    "id": "the-girl-who-played-with-fire",
+    "t": "The Girl Who Played with Fire",
+    "a": "Stieg Larsson",
+    "g": "Thriller",
+    "s": [
+      "Nordic Noir",
+      "Crime"
+    ],
+    "b": [],
+    "why": "Millennium 2 — Salander framed for murder, the sex-trafficking trail.",
+    "isbn": "9780307476159",
+    "coverId": 8345016,
+    "year": 2006
+  },
+  {
+    "id": "the-girl-who-kicked-the-hornet-s-nest",
+    "t": "The Girl Who Kicked the Hornet's Nest",
+    "a": "Stieg Larsson",
+    "g": "Thriller",
+    "s": [
+      "Nordic Noir",
+      "Crime"
+    ],
+    "b": [],
+    "why": "Millennium 3 — Salander on trial, the Section exposed.",
+    "isbn": "9781849163439",
+    "coverId": 8352108,
+    "year": 2007
   }
 ]
