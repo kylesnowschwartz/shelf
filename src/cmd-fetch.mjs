@@ -7,7 +7,7 @@ import { BOOKS_JSON, CACHE, CANDIDATES_JSON } from './paths.mjs';
 import { log, emit, fail, EXIT, color } from './output.mjs';
 import { byAuthor, bySubject, googleBySubject } from './sources.mjs';
 import { mapWithConcurrency } from './concurrency.mjs';
-import { dedupKey, slugify, asciiRatio, isJuvenile, hasForeignSubjectTag } from './util.mjs';
+import { cleanTitle, dedupKey, slugify, asciiRatio, isJuvenile, hasForeignSubjectTag } from './util.mjs';
 
 // Searches overlap because each one spends its time waiting on a remote index,
 // not on local work. The per-host pacing in http.mjs sets the request RATE;
@@ -132,6 +132,26 @@ const SELF_PUBLISHING_IMPRINTS = [
 
 export const isSelfPublished = (c) => Boolean(c.publisher) && SELF_PUBLISHING_IMPRINTS.includes(c.publisher.toLowerCase());
 
+// Collected-edition screen. A catalog carries records that stand for a bundle
+// rather than a book — "Works (Carrie / Night Shift / 'Salem's Lot)" — and
+// they rank well because every title inside them contributes signal. There is
+// nothing to recommend: the reader cannot be pointed at "Works", and the
+// individual novels are already candidates in their own right. The label is
+// what identifies them, so the test is on the title with any parenthetical
+// contents removed.
+const COLLECTED_EDITION_TITLES = new Set([
+  'works',
+  'novels',
+  'omnibus',
+  'collected works',
+  'complete works',
+  'the complete novels',
+  'collected novels',
+  'selected works',
+]);
+
+export const isCollectedEdition = (c) => COLLECTED_EDITION_TITLES.has(cleanTitle(c.t).toLowerCase());
+
 export async function run(opts) {
   const limit = Number(opts.limit) || 400;
   const sources = String(opts.source).split(',').map((s) => s.trim());
@@ -199,6 +219,7 @@ export async function run(opts) {
   const chosen = new Map(); // dedupKey -> candidate
   let droppedByQuality = 0;
   let droppedBySelfPublishing = 0;
+  let droppedAsCollectedEdition = 0;
   let added = true;
   for (let i = 0; added && chosen.size < limit; i++) {
     added = false;
@@ -212,6 +233,10 @@ export async function run(opts) {
       if (isSelfPublished(cand)) {
         droppedBySelfPublishing++;
         continue; // drop known self-publishing imprints
+      }
+      if (isCollectedEdition(cand)) {
+        droppedAsCollectedEdition++;
+        continue; // drop bundle records that name no single book
       }
       if (!passesQualityGate(cand, readAuthors)) {
         droppedByQuality++;
@@ -263,6 +288,7 @@ export async function run(opts) {
     failedQueries: failedQueries.length,
     droppedByQuality,
     droppedBySelfPublishing,
+    droppedAsCollectedEdition,
     withIsbn: candidates.filter((c) => c.isbn).length,
     withPages: candidates.filter((c) => c.pages).length,
   };

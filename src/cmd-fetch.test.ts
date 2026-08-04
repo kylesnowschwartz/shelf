@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error — .mjs sibling has no type declarations
-import { passesQualityGate, broadenSubjects, isSelfPublished } from './cmd-fetch.mjs';
+import { passesQualityGate, broadenSubjects, isSelfPublished, isCollectedEdition } from './cmd-fetch.mjs';
 // @ts-expect-error — .mjs sibling has no type declarations
 import { fromGoogleBooks } from './sources.mjs';
 
@@ -73,5 +73,17 @@ describe('broadenSubjects', () => {
   it('passes an unmapped tag through unchanged', () => {
     const result = broadenSubjects(['Espionage']);
     expect(result).toEqual(['Espionage']);
+  });
+});
+
+describe('isCollectedEdition', () => {
+  it('drops a bundle record that names no single book', () => {
+    expect(isCollectedEdition({ t: "Works (Carrie / Night Shift / 'Salem's Lot)" })).toBe(true);
+    expect(isCollectedEdition({ t: 'Complete Works' })).toBe(true);
+  });
+
+  it('keeps a real book whose title merely carries a parenthetical', () => {
+    expect(isCollectedEdition({ t: 'A Wind in the Door (Time Quintet #2)' })).toBe(false);
+    expect(isCollectedEdition({ t: 'The Works of Love' })).toBe(false);
   });
 });
