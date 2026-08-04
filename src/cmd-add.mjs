@@ -45,6 +45,8 @@ export async function run(opts, command) {
   const why = opts.why || (hit?.firstSentence ? String(hit.firstSentence).slice(0, 160) : '');
   if (!opts.why) warnings.push(why ? "why defaulted to the book's first line — set --why to editorialize" : 'no --why given and none derivable — set --why');
   if (!hit) warnings.push('Open Library had no match — no ISBN/year/cover; verify the title/author spelling');
+  if (hit && !hit.isbn) warnings.push('Open Library matched, but no English-edition ISBN was found — set isbn manually if known');
+  if (hit && hit.year === undefined) warnings.push('Open Library matched, but no first-publish year was found — set year manually if known');
 
   const list = (v) => (v ? String(v).split(',').map((x) => x.trim()).filter(Boolean) : []);
 

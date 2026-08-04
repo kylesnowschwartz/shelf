@@ -3,7 +3,8 @@
 `shelf` is a deterministic reading-recommendation engine. It is the PICKER: it
 ranks unread candidate books against a reader's shelf. A calling agent maps the
 human's natural language to flags, runs the engine, and explains the results.
-The engine never parses prose and never writes prose. No API keys; runs locally.
+The engine never parses prose and never writes prose. Runs locally, and needs no
+credentials; `GOOGLE_BOOKS_API_KEY`, when set, widens the candidate pool.
 
 Run from the repo root: `npm run shelf -- <command>` (or `node shelf.mjs <command>`, or
 `shelf <command>` if installed on PATH via `npm link`).
@@ -25,13 +26,20 @@ npm run shelf -- enrich    # backfill missing ISBN/year/cover on books.json (ide
 ## Pipeline (run after adding books or on a fresh clone; artifacts are git-ignored in .cache/)
 
 ```bash
-npm run shelf -- fetch     # → .cache/candidates.json     (Open Library; ~90s)
+npm run shelf -- fetch     # → .cache/candidates.json     (Open Library + Google Books; minutes)
 npm run shelf -- embed     # → .cache/embeddings/         (local MiniLM; git-ignored)
 npm run shelf -- build     # → .cache/recommendations.json
 ```
 
 After `add`, re-run fetch → embed → build to fold the new book into both the
 exclusion set and the taste centroids.
+
+`fetch` issues roughly a hundred searches, overlapping four at a time within
+Open Library's published rate allowance. Its wall clock is set by Open
+Library, whose sorted searches answer in seconds at best and shed load with a
+503 under strain; a query that exhausts its retries costs only its own slice of
+the pool, and the run reports how many were lost. `GOOGLE_BOOKS_API_KEY` adds
+Google Books as a second source — a dozen more queries answering in seconds.
 
 ## Publish to the website (`export`)
 
@@ -96,6 +104,7 @@ user-data-dir and survives between runs; the saved state at `.cache/zlib-state.j
 is a portable backup.
 
 Delivery destination (set by `retrieve/deliver.mjs`):
+
 - `/Volumes/Kindle/documents/` when the Kindle is mounted (`kind: "kindle"`)
 - `~/Downloads/` otherwise (`kind: "downloads"`)
 - `<dir>` when `--dest <dir>` is given (`kind: "override"`)

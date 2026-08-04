@@ -3,7 +3,8 @@
 `shelf` is a deterministic, keyless reading-recommendation engine — the **picker**. It
 fetches unread candidate books, embeds them locally (MiniLM), and ranks them against a
 read shelf with diversity + calibration re-ranking. It never parses or writes prose; that
-is the calling agent's job. Output is `--json`-primary. No API keys, ever.
+is the calling agent's job. Output is `--json`-primary. It runs with no credentials;
+`GOOGLE_BOOKS_API_KEY`, when set, adds Google Books as a second candidate source.
 
 This repo also **owns the reading-list data** (`data/books.json`). The personal website
 `kylesnowschwartz.github.io` renders a committed copy of it, kept in sync by `shelf export`

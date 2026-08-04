@@ -37,10 +37,66 @@ export const dedupKey = (title, author) => {
   return `${t}|${surname(author)}`;
 };
 
+// Catalogs disagree on which language code list they publish: Open Library
+// emits three-letter codes ("eng"), Google Books two-letter ones ("en"). A
+// candidate carries the three-letter form whatever produced it, so one
+// language test serves every source.
+const TWO_TO_THREE_LETTER_LANGUAGE = {
+  en: 'eng',
+  fr: 'fre',
+  de: 'ger',
+  es: 'spa',
+  it: 'ita',
+  pt: 'por',
+  nl: 'dut',
+  sv: 'swe',
+  no: 'nor',
+  da: 'dan',
+  fi: 'fin',
+  is: 'ice',
+  pl: 'pol',
+  ru: 'rus',
+  ja: 'jpn',
+  zh: 'chi',
+  ko: 'kor',
+};
+
+/** A language code in the three-letter form; an unrecognized code is passed through. */
+export const threeLetterLanguage = (code) => {
+  if (typeof code !== 'string') return undefined;
+  const lower = code.trim().toLowerCase();
+  return TWO_TO_THREE_LETTER_LANGUAGE[lower] || lower;
+};
+
 /** Prefer a 13-digit ISBN from a list. */
 export const pickIsbn13 = (isbns) => {
   if (!Array.isArray(isbns) || isbns.length === 0) return undefined;
   return isbns.find((x) => String(x).replace(/[^0-9Xx]/g, '').length === 13) || isbns[0];
+};
+
+/**
+ * An ISBN's registration group encodes the publisher's language/territory —
+ * group 0 and group 1 (the digit right after the 978 EAN prefix on a 13-digit
+ * ISBN, or the leading digit on a 10-digit one) are reserved for the English-
+ * language area. A work's aggregated `isbn` list mixes every translation's
+ * ISBNs together, so this is what tells an English edition's ISBN apart from
+ * e.g. a Korean or French one without a language/country lookup table.
+ */
+const isEnglishIsbn = (digits) =>
+  (digits.length === 13 && (digits.startsWith('9780') || digits.startsWith('9781'))) ||
+  (digits.length === 10 && (digits[0] === '0' || digits[0] === '1'));
+
+/**
+ * Prefer a 13-digit English-edition ISBN from a work's aggregated ISBN list,
+ * falling back to a 10-digit English one. Returns undefined rather than an
+ * arbitrary (possibly foreign-language) ISBN when no English one is present.
+ */
+export const pickEnglishIsbn13 = (isbns) => {
+  if (!Array.isArray(isbns) || isbns.length === 0) return undefined;
+  const digitsOf = (x) => String(x).replace(/[^0-9Xx]/g, '');
+  const english13 = isbns.map(digitsOf).find((d) => d.length === 13 && isEnglishIsbn(d));
+  if (english13) return english13;
+  return isbns.map(digitsOf).find((d) => d.length === 10 && isEnglishIsbn(d));
 };
 
 /** Fraction of letters that are plain ASCII — a cheap non-English-script guard. */

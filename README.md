@@ -1,8 +1,9 @@
 # shelf
 
-A keyless, local reading-recommendation engine. It ranks unread books against the shelf of
+A local reading-recommendation engine. It ranks unread books against the shelf of
 books you've read, runs on your own machine (Open Library for candidates, a local MiniLM model
-for embeddings), and prints JSON so an agent can drive it. No API keys.
+for embeddings), and prints JSON so an agent can drive it. It works with no credentials at all;
+setting `GOOGLE_BOOKS_API_KEY` adds Google Books as a second candidate source for a wider pool.
 
 It ships two ways: a Node CLI, and a Claude Code plugin that bundles the CLI plus an agent
 driver (the `shelf-skill`).
@@ -44,9 +45,11 @@ the plugin updates, so a book you `add` there is lost on the next update. Two se
 avoid it:
 
 - Add the marketplace by local path, so the plugin *is* your clone:
+
   ```
   /plugin marketplace add /path/to/shelf
   ```
+
 - Or treat a remote install as read-only and run `add`/`export` from the clone.
 
 `recommend` and `retrieve` only read the data, so they're safe from any install.

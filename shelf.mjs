@@ -32,9 +32,9 @@ const lazy = (mod, fn) => async (...args) => {
 
 program
   .command('fetch')
-  .description('fetch unread candidate books from Open Library (+ Google Books, best-effort)')
+  .description('fetch unread candidate books from Open Library, and Google Books when a key is set')
   .option('--limit <n>', 'max candidates to keep', '400')
-  .option('--source <list>', 'comma list: openlibrary,googlebooks', 'openlibrary,googlebooks')
+  .option('--source <list>', 'comma list: openlibrary,googlebooks (googlebooks is skipped without GOOGLE_BOOKS_API_KEY)', 'openlibrary,googlebooks')
   .option('--dry-run', 'show what would be fetched; write nothing')
   .addHelpText('after', '\nExample:\n  $ shelf fetch --limit 300\n  $ shelf fetch --dry-run --json')
   .action(lazy('./src/cmd-fetch.mjs', 'run'));
