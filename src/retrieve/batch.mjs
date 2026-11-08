@@ -55,6 +55,10 @@ export function parseBatch(text) {
  * `{ exitCode, result, error }` — `result` is the single-book stdout JSON,
  * `error` the single-book structured error (`{ code, message, ... }`).
  *
+ * Each result row is `{ input, status, picked, destination, reused,
+ * convertedFrom, error }`, with null for whatever the single-book run did not
+ * report.
+ *
  * @returns {Promise<{ output: { results: any[], summary: { delivered: number, failed: number } }, exitCode: number }>}
  */
 export async function runBatch(entries, opts, retrieveOne, log = () => {}) {
@@ -106,6 +110,8 @@ function toResultRow(input, { exitCode, result, error }) {
         }
       : null,
     destination: result?.destination ?? null,
+    reused: result?.reused ?? null, // true when an identical file was already at the destination
+    convertedFrom: result?.convertedFrom ?? null, // 'epub' | 'mobi' when the book was converted to AZW3
     error: exitCode === EXIT.OK ? null : error?.message || `retrieve exited ${exitCode}`,
   };
 }

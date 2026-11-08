@@ -74,13 +74,55 @@ describe('runBatch', () => {
       status: 'delivered',
       picked: { title: 'Slow Horses', format: 'azw3', sizeBytes: 1000, sourceId: 'zlib:1' },
       destination: '/Volumes/Kindle/documents/slow-horses.azw3',
+      reused: null,
+      convertedFrom: null,
       error: null,
     });
-    expect(output.results[1]).toMatchObject({ picked: null, destination: null, error: 'no candidates' });
+    expect(output.results[1]).toMatchObject({
+      picked: null,
+      destination: null,
+      reused: null,
+      convertedFrom: null,
+      error: 'no candidates',
+    });
     expect(output.results[2].error).toMatch(/neither/);
     expect(output.results[3].error).toBe('boom');
     expect(output.summary).toEqual({ delivered: 1, failed: 3 });
     expect(exitCode).toBe(0);
+  });
+
+  it('carries convertedFrom, reused and the final destination from the single-book result', async () => {
+    const retrieveOne = vi.fn().mockResolvedValue({
+      exitCode: 0,
+      result: {
+        picked: { title: 'Spook Street', format: 'epub', sizeBytes: 900, sourceId: 'zlib:3' },
+        destination: '/Volumes/Kindle/documents/spook-street-2.azw3',
+        format: 'azw3',
+        convertedFrom: 'epub',
+        reused: false,
+        sizeBytes: 1200,
+      },
+      error: null,
+    });
+    const { output } = await runBatch(parseBatch('Spook Street | Mick Herron'), {}, retrieveOne);
+    expect(output.results[0]).toEqual({
+      input: 'Spook Street | Mick Herron',
+      status: 'delivered',
+      picked: { title: 'Spook Street', format: 'azw3', sizeBytes: 1200, sourceId: 'zlib:3' },
+      destination: '/Volumes/Kindle/documents/spook-street-2.azw3',
+      reused: false,
+      convertedFrom: 'epub',
+      error: null,
+    });
+  });
+
+  it('reports a reused file', async () => {
+    const retrieveOne = vi.fn().mockResolvedValue({
+      ...delivered,
+      result: { ...delivered.result, reused: true },
+    });
+    const { output } = await runBatch(parseBatch('9781569476437'), {}, retrieveOne);
+    expect(output.results[0]).toMatchObject({ status: 'delivered', reused: true, convertedFrom: null });
   });
 
   it('reports dry-run rows as successes', async () => {

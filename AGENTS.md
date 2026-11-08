@@ -102,7 +102,7 @@ npm run shelf -- retrieve --batch series.txt --json  # one book per line; `-` re
 flags (`--ext`, `--english`, `--max-mb`, `--dest`, `--dry-run`) applied to each. A line is
 an ISBN (trailing text is a label, e.g. `9781569476437 Slow Horses`) or `Title | Author`;
 blank lines and `#` comments are skipped. One failure does not stop the rest. Output is
-`{results:[{input, status, picked, destination, error}], summary:{delivered, failed}}` with
+`{results:[{input, status, picked, destination, reused, convertedFrom, error}], summary:{delivered, failed}}` with
 `status` one of `delivered | dry-run | no-match | error`. Exit `0` if any book succeeded,
 else the first failure's code. `--batch` with `--isbn`/`--title`/`--source-id` exits `2`.
 

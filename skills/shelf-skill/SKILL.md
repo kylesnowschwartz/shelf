@@ -191,7 +191,9 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
 
    Books run one at a time with the same flags; one failure doesn't stop the rest. Read
    `results[]` (`status`: `delivered` / `dry-run` / `no-match` / `error`) and
-   `summary.delivered` / `summary.failed`, and report each miss by its `input` line.
+   `summary.delivered` / `summary.failed`, and report each miss by its `input` line. A row's
+   `convertedFrom` (`epub` / `mobi`, else `null`) and `reused` flag mean the same as in a
+   single retrieve.
 6. **Never name the backend.** Say "your copy", "the source", "the best edition",
    "delivered to your Kindle" — never the library/site/binary it came from.
 
