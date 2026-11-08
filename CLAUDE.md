@@ -33,7 +33,7 @@ engine). Install with `/plugin marketplace add kylesnowschwartz/shelf` → `/plu
 | `skills/shelf-skill/SKILL.md` | the agent driver (recommend / retrieve / add / maintain) |
 | `bin/shelf` | bare `shelf` command; first-run `npm install`, then `node shelf.mjs` |
 | `shelf.mjs` | CLI entry (commander); lazy-loads each command from `src/` |
-| `src/cmd-*.mjs` | one file per command (fetch, add, enrich, embed, build, next, profile, export, retrieve, zlib-login) |
+| `src/cmd-*.mjs` | one file per command (fetch, add, enrich, embed, build, next, profile, export, retrieve, convert, zlib-login) |
 | `src/recommend.ts` | pure, dependency-free ranking model (internal to the engine; build/next/profile) |
 | `src/books-io.mjs` | the single books.json read/write/serialize point |
 | `src/paths.mjs` | the single source of truth for all file locations |
