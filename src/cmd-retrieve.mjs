@@ -188,6 +188,7 @@ export async function run(opts /*, command */) {
       kind: delivered.kind, // 'kindle' | 'downloads' | 'override'
       format: delivered.format,
       sizeBytes: delivered.sizeBytes,
+      reused: delivered.reused, // true when an identical file was already at the destination
       transport: downloaded.transport, // 'binary' | 'browser' — which path delivered
       alternatives,
       omitted,
@@ -640,6 +641,7 @@ async function runSourceIdBypass(source, opts) {
       kind: delivered.kind,
       format: delivered.format,
       sizeBytes: delivered.sizeBytes,
+      reused: delivered.reused, // true when an identical file was already at the destination
       transport: downloaded.transport, // 'binary' | 'browser' — which path delivered
       bypassed: true,
     },

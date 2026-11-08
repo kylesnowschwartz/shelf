@@ -1,8 +1,10 @@
 // Decide where a retrieved book file should land, and move it there.
 //
-// Pure file ops. No network. No shell-out. Idempotent: calling deliver()
-// twice with the same source is a no-op the second time (source already
-// gone). Tested purely with env-overridable mount detection.
+// Pure file ops. No network. No shell-out. Never overwrites a file: a
+// same-named file holding a different book pushes the new one to a numbered
+// name (`title-2.azw3`), and a byte-identical file is reused, so delivering
+// the same book twice leaves one copy. Tested purely with env-overridable
+// mount detection.
 //
 // Destination resolution (first hit wins):
 //   1) explicit --dest argument
@@ -14,10 +16,10 @@
 // uses to phrase the answer: "landed on your Kindle" vs "left in Downloads,
 // plug in and re-deliver later".
 
-import { copyFile, mkdir, stat, unlink } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { copyFile, mkdir, readFile, stat, unlink } from 'node:fs/promises';
+import { constants as fsConstants, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, extname, join } from 'node:path';
 import { slugify } from '../util.mjs';
 
 const KINDLE_MOUNT_DEFAULT = '/Volumes/Kindle';
@@ -108,6 +110,7 @@ export function safeFilename({ title, format }) {
  *   mounted: boolean,
  *   format: string,
  *   sizeBytes: number,
+ *   reused: boolean,        // true when an identical file was already there
  * }>}
  */
 export async function deliver(opts = {}) {
@@ -124,9 +127,9 @@ export async function deliver(opts = {}) {
 
   const format = opts.format || extractFormat(sourcePath) || 'epub';
   const filename = safeFilename({ title: opts.title, format });
-  const finalPath = join(decision.dir, filename);
+  const { path: finalPath, reused } = await freeDestination(decision.dir, filename, sourcePath);
 
-  await copyFile(sourcePath, finalPath);
+  if (!reused) await copyFile(sourcePath, finalPath, fsConstants.COPYFILE_EXCL);
   const sizeBytes = (await stat(finalPath)).size;
   // Best-effort cleanup of the source — if it's already gone (idempotent
   // re-run) or on a read-only filesystem (unlikely), don't fail delivery.
@@ -142,7 +145,36 @@ export async function deliver(opts = {}) {
     mounted: decision.mounted,
     format: extractFormat(finalPath) || format,
     sizeBytes,
+    reused,
   };
+}
+
+/**
+ * Pick the path a delivery lands on inside `dir`. Tries `filename`, then
+ * `<stem>-2.<ext>`, `<stem>-3.<ext>`, ... and returns the first that is free
+ * (`reused: false`) or already holds a byte-identical copy of `sourcePath`
+ * (`reused: true`).
+ *
+ * @param {string} dir
+ * @param {string} filename
+ * @param {string} sourcePath
+ * @returns {Promise<{ path: string, reused: boolean }>}
+ */
+export async function freeDestination(dir, filename, sourcePath) {
+  const ext = extname(filename);
+  const stem = filename.slice(0, filename.length - ext.length);
+  for (let n = 1; ; n++) {
+    const path = join(dir, n === 1 ? filename : `${stem}-${n}${ext}`);
+    if (!existsSync(path)) return { path, reused: false };
+    if (await sameBytes(path, sourcePath)) return { path, reused: true };
+  }
+}
+
+async function sameBytes(a, b) {
+  const [sa, sb] = await Promise.all([stat(a), stat(b)]);
+  if (sa.size !== sb.size) return false;
+  const [ba, bb] = await Promise.all([readFile(a), readFile(b)]);
+  return ba.equals(bb);
 }
 
 /** '/some/dir/title.epub' → 'epub'; no extension → null */

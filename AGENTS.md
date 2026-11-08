@@ -125,9 +125,11 @@ message to use `--dest`. When no AZW3 exists, save the file with `--dest <dir>` 
 `convert` on it.
 
 Filename is the slugified title without series text ("Slough House 4: Spook Street" →
-`spook-street.azw3`) + format extension.
+`spook-street.azw3`) + format extension. Delivery never overwrites a file: when a
+different file already has the name, the book lands as `spook-street-2.azw3`; when a
+byte-identical copy is already there, it is reused and the result says `"reused": true`.
 Each result carries `picked`, `destination`, `mounted`, `kind`, `format`, `sizeBytes`,
-`alternatives[]`, `omitted[]` (candidates a hard filter dropped — surface them back).
+`reused`, `alternatives[]`, `omitted[]` (candidates a hard filter dropped — surface them back).
 
 `matchedBy` (also in `--dry-run` output) says which search found the candidates. An
 `--isbn` search that finds no candidate carrying that exact ISBN (common for a print

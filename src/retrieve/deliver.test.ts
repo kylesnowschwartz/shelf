@@ -1,7 +1,7 @@
 // Tests for deliver.mjs — pure file ops, fake Kindle mount via env override.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -189,6 +189,51 @@ describe('deliver (end-to-end)', () => {
     const r = await deliver({ sourcePath: source, title: 'X', dest });
     expect(r.kind).toBe('override');
     expect(r.destination).toBe(join(dest, 'x.epub'));
+  });
+
+  it('delivers under a numbered name when a different book already has the name', async () => {
+    const dest = join(tmpRoot, 'dest');
+    mkdirSync(dest);
+    writeFileSync(join(dest, 'dune.azw3'), 'another book');
+    const source = join(tmpRoot, 'src.azw3');
+    writeFileSync(source, 'this book');
+
+    const r = await deliver({ sourcePath: source, title: 'Dune', dest });
+
+    expect(r.destination).toBe(join(dest, 'dune-2.azw3'));
+    expect(r.reused).toBe(false);
+    expect(readFileSync(join(dest, 'dune.azw3'), 'utf8')).toBe('another book');
+    expect(readFileSync(r.destination, 'utf8')).toBe('this book');
+  });
+
+  it('treats a same-size file with different bytes as a different book', async () => {
+    const dest = join(tmpRoot, 'dest');
+    mkdirSync(dest);
+    writeFileSync(join(dest, 'dune.azw3'), 'aaaa');
+    const source = join(tmpRoot, 'src.azw3');
+    writeFileSync(source, 'bbbb');
+
+    const r = await deliver({ sourcePath: source, title: 'Dune', dest });
+
+    expect(r.destination).toBe(join(dest, 'dune-2.azw3'));
+    expect(readFileSync(join(dest, 'dune.azw3'), 'utf8')).toBe('aaaa');
+  });
+
+  it('reuses a byte-identical file instead of writing a second copy', async () => {
+    const dest = join(tmpRoot, 'dest');
+    mkdirSync(dest);
+    writeFileSync(join(dest, 'dune.azw3'), 'another book');
+    writeFileSync(join(dest, 'dune-2.azw3'), 'this book');
+    const source = join(tmpRoot, 'src.azw3');
+    writeFileSync(source, 'this book');
+
+    const r = await deliver({ sourcePath: source, title: 'Dune', dest });
+
+    expect(r.destination).toBe(join(dest, 'dune-2.azw3'));
+    expect(r.reused).toBe(true);
+    expect(r.sizeBytes).toBe('this book'.length);
+    expect(readdirSync(dest).sort()).toEqual(['dune-2.azw3', 'dune.azw3']);
+    expect(existsSync(source)).toBe(false);
   });
 
   it('rejects a missing source file with a clear error', async () => {
