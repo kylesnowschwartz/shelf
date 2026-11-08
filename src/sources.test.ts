@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 // @ts-expect-error — .mjs sibling has no type declarations
-import { lookupBook, fromOpenLibrary, googleBySubject, fromGoogleBooks } from './sources.mjs';
+import { lookupBook, lookupIsbn, fromOpenLibrary, googleBySubject, fromGoogleBooks } from './sources.mjs';
 
 /** A Response-shaped stub carrying only what getJson reads. */
 function reply(body: unknown) {
@@ -74,6 +74,22 @@ describe('lookupBook', () => {
     const { fetchImpl } = stubFetch({ docs: [] });
     const hit = await lookupBook('Some Nonexistent Title', 'Nobody', { fetchImpl });
     expect(hit).toBeNull();
+  });
+});
+
+describe('lookupIsbn', () => {
+  it('asks Open Library by isbn and returns the title and first author', async () => {
+    const { urls, fetchImpl } = stubFetch({ docs: [{ title: 'Dead Lions', author_name: ['Mick Herron'] }] });
+    const hit = await lookupIsbn('978-1-61695-225-9', { fetchImpl });
+    expect(hit).toEqual({ title: 'Dead Lions', author: 'Mick Herron' });
+    const url = new URL(urls[0]);
+    expect(url.searchParams.get('isbn')).toBe('9781616952259');
+    expect(url.searchParams.has('key')).toBe(false);
+  });
+
+  it('returns null when Open Library has no record for the isbn', async () => {
+    const { fetchImpl } = stubFetch({ docs: [] });
+    expect(await lookupIsbn('9780000000000', { fetchImpl })).toBeNull();
   });
 });
 

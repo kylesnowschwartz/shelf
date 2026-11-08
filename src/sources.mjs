@@ -164,3 +164,20 @@ export async function lookupBook(title, author, { fetchImpl } = {}) {
     languages: Array.isArray(doc.language) ? doc.language : undefined,
   };
 }
+
+/**
+ * Resolve ONE ISBN to the work's { title, author } via Open Library's keyless
+ * search. Returns null when Open Library has no record carrying that ISBN, or
+ * the record lacks a title or author.
+ */
+export async function lookupIsbn(isbn, { fetchImpl } = {}) {
+  const params = new URLSearchParams({
+    isbn: String(isbn).replace(/[^0-9Xx]/g, ''),
+    fields: 'title,author_name',
+    limit: '1',
+  });
+  const data = await getJson(`${OL}?${params}`, { retries: 3, ...(fetchImpl ? { fetchImpl } : {}) });
+  const doc = data?.docs?.[0];
+  if (!doc?.title || !Array.isArray(doc.author_name) || !doc.author_name.length) return null;
+  return { title: doc.title, author: doc.author_name[0].trim() };
+}

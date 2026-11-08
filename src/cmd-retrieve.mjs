@@ -23,6 +23,7 @@ import { join } from 'node:path';
 import { log, emit, fail, EXIT } from './output.mjs';
 import * as zlib from './retrieve/sources/zlib.mjs';
 import { deliver } from './retrieve/deliver.mjs';
+import { lookupIsbn } from './sources.mjs';
 
 // Format preference order. AZW3 is Amazon's native format and renders
 // reliably on every Kindle, so it leads; modern Kindles read EPUB natively
@@ -68,13 +69,18 @@ export async function run(opts /*, command */) {
   // ─── 2. search ──────────────────────────────────────────────────────────
   log(`source: searching${isbn ? ` by isbn ${isbn}` : ` for "${title}" by ${author}"`}`);
   let result;
+  let matchedBy;
   try {
-    result = await source.search({
+    const found = await searchWithIsbnFallback(source, {
       isbn,
       title,
       author,
       extensions: extensions.length ? extensions : undefined,
     });
+    if (found.unresolved) {
+      fail(EXIT.NO_DATA, `source has no copy with isbn ${isbn}, and ${found.unresolved}`);
+    }
+    ({ result, matchedBy } = found);
   } catch (err) {
     handleSourceError(err);
   }
@@ -109,7 +115,7 @@ export async function run(opts /*, command */) {
 
   if (opts.dryRun) {
     log('dry run: not downloading');
-    emit({ picked, alternatives, omitted, dryRun: true }, opts);
+    emit({ picked, matchedBy, alternatives, omitted, dryRun: true }, opts);
     return;
   }
 
@@ -142,6 +148,7 @@ export async function run(opts /*, command */) {
   emit(
     {
       picked,
+      matchedBy, // 'isbn' | 'title' — which search found the candidates
       destination: delivered.destination,
       mounted: delivered.mounted,
       kind: delivered.kind, // 'kindle' | 'downloads' | 'override'
@@ -263,6 +270,62 @@ function handleSourceError(err) {
     fail(code, message, extra);
   }
   throw err;
+}
+
+// ─── isbn → title fallback ────────────────────────────────────────────────
+
+/** ISBN digits only (plus a trailing X check digit), uppercased. */
+const normalizeIsbn = (s) => String(s || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+
+/**
+ * True when a candidate's isbn field names the requested ISBN. The field can
+ * carry several ISBNs separated by commas or spaces, so each is compared.
+ */
+export function candidateHasIsbn(c, isbn) {
+  const want = normalizeIsbn(isbn);
+  if (!want || !c?.isbn) return false;
+  return String(c.isbn)
+    .split(/[\s,;]+/)
+    .some((x) => normalizeIsbn(x) === want);
+}
+
+/**
+ * Search the source, falling back from ISBN to title + author. A print ISBN
+ * often finds nothing at a source that stocks only the ebook editions, which
+ * carry different ISBNs. When the ISBN search returns no candidate carrying
+ * the requested ISBN, the ISBN is resolved to a title and author (the
+ * caller's --title/--author when both are given, otherwise Open Library) and
+ * the source is searched again by those.
+ *
+ * Returns { result, matchedBy: 'isbn' | 'title' }, or { unresolved: reason }
+ * when the fallback could not find a title and author for the ISBN.
+ *
+ * @param {{ search: Function }} source
+ * @param {{ isbn?: string, title?: string, author?: string, extensions?: string[] }} query
+ * @param {{ lookup?: (isbn: string) => Promise<{ title: string, author: string } | null> }} [deps]
+ */
+export async function searchWithIsbnFallback(source, { isbn, title, author, extensions }, { lookup = lookupIsbn } = {}) {
+  if (!isbn) {
+    return { result: await source.search({ title, author, extensions }), matchedBy: 'title' };
+  }
+  const byIsbn = await source.search({ isbn, extensions });
+  if (byIsbn.candidates.some((c) => candidateHasIsbn(c, isbn))) {
+    return { result: byIsbn, matchedBy: 'isbn' };
+  }
+
+  let resolved = title && author ? { title, author } : null;
+  if (!resolved) {
+    log(`source: no candidate carries isbn ${isbn}; resolving it to a title via Open Library`);
+    try {
+      resolved = await lookup(isbn);
+    } catch (err) {
+      return { unresolved: `the Open Library lookup for it failed (${err.message})` };
+    }
+    if (!resolved) return { unresolved: 'Open Library has no title and author for it' };
+  }
+  log(`source: searching for "${resolved.title}" by ${resolved.author}`);
+  const byTitle = await source.search({ title: resolved.title, author: resolved.author, extensions });
+  return { result: byTitle, matchedBy: 'title' };
 }
 
 // ─── source-id bypass ─────────────────────────────────────────────────────
