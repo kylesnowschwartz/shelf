@@ -152,10 +152,11 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
    # or
    shelf retrieve --title "..." --author "..." --english --json
    ```
+
    Kyle's Kindle shows only **AZW3** files copied over USB; sideloaded EPUBs do not appear.
-   When the Kindle is mounted and `--dest` is not set, the format filter defaults to
-   `azw3,mobi` (AZW3 preferred), and an EPUB bound for the Kindle is refused with a usage
-   error. If no AZW3 exists, retrieve the best EPUB or MOBI with `--dest <dir>`, then run
+   MOBI files do not appear either. When the Kindle is mounted and `--dest` is not set, the
+   format filter defaults to `azw3`, and an EPUB or MOBI bound for the Kindle is refused
+   with a usage error. If no AZW3 exists, retrieve the best EPUB or MOBI with `--dest <dir>`, then run
    `shelf convert <file> --replace` to make an AZW3 (needs Calibre) and copy it to
    `/Volumes/Kindle/documents/`. Otherwise the engine prefers AZW3, then EPUB, then MOBI,
    then PDF (poor reflow). Add `--ext <list>` to be strict, `--english` to drop
@@ -173,10 +174,12 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
 5. **Several books (e.g. a series) → one batch run**, not a shell loop. Write one book per
    line — an ISBN (text after it is a label) or `Title | Author`; `#` lines are comments —
    and pass the file (or `-` for stdin):
+
    ```bash
    printf '9781569476437 Slow Horses\nDead Lions | Mick Herron\n' \
      | shelf retrieve --batch - --ext azw3 --json
    ```
+
    Books run one at a time with the same flags; one failure doesn't stop the rest. Read
    `results[]` (`status`: `delivered` / `dry-run` / `no-match` / `error`) and
    `summary.delivered` / `summary.failed`, and report each miss by its `input` line.

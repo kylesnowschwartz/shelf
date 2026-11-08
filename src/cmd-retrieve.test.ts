@@ -19,7 +19,7 @@ import {
   candidateHasIsbn,
   searchWithIsbnFallback,
   resolveFormats,
-  kindleEpubError,
+  kindleFormatError,
   editionTitleKey,
   publisherFamily,
   compactCandidates,
@@ -400,16 +400,16 @@ describe('resolveFormats (Kindle format default)', () => {
   const kindleEnv = () => ({ SHELF_RETRIEVE_KINDLE_MOUNT: mount });
   const noKindle = { env: {}, mountDefault: missing };
 
-  it('defaults to azw3,mobi when the Kindle is mounted and --ext is absent', () => {
-    expect(resolveFormats({ env: kindleEnv() })).toEqual({ extensions: ['azw3', 'mobi'], kindle: true });
+  it('defaults to azw3 when the Kindle is mounted and --ext is absent', () => {
+    expect(resolveFormats({ env: kindleEnv() })).toEqual({ extensions: ['azw3'], kindle: true });
   });
 
   it('keeps an explicit non-EPUB --ext on the Kindle', () => {
     expect(resolveFormats({ ext: 'AZW3', env: kindleEnv() })).toEqual({ extensions: ['azw3'], kindle: true });
   });
 
-  it('refuses --ext containing epub when delivering to the Kindle', () => {
-    for (const ext of ['epub', 'azw3,epub']) {
+  it('refuses --ext containing epub or mobi when delivering to the Kindle', () => {
+    for (const ext of ['epub', 'mobi', 'azw3,epub']) {
       const r = resolveFormats({ ext, env: kindleEnv() });
       expect(r.error).toMatch(/--dest/);
     }
@@ -425,11 +425,12 @@ describe('resolveFormats (Kindle format default)', () => {
     expect(resolveFormats({ ext: 'epub', dest: '/tmp/books', env: kindleEnv() }).error).toBeUndefined();
   });
 
-  it('kindleEpubError blocks only an EPUB headed to the Kindle', () => {
-    expect(kindleEpubError({ format: 'EPUB', env: kindleEnv() })).toMatch(/--dest/);
-    expect(kindleEpubError({ format: 'azw3', env: kindleEnv() })).toBeNull();
-    expect(kindleEpubError({ format: 'epub', dest: '/tmp/books', env: kindleEnv() })).toBeNull();
-    expect(kindleEpubError({ format: 'epub', ...noKindle })).toBeNull();
+  it('kindleFormatError blocks only EPUB and MOBI headed to the Kindle', () => {
+    expect(kindleFormatError({ format: 'EPUB', env: kindleEnv() })).toMatch(/--dest/);
+    expect(kindleFormatError({ format: 'MOBI', env: kindleEnv() })).toMatch(/shelf convert/);
+    expect(kindleFormatError({ format: 'azw3', env: kindleEnv() })).toBeNull();
+    expect(kindleFormatError({ format: 'epub', dest: '/tmp/books', env: kindleEnv() })).toBeNull();
+    expect(kindleFormatError({ format: 'epub', ...noKindle })).toBeNull();
   });
 });
 

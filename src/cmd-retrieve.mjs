@@ -206,17 +206,19 @@ function parseList(s) {
     .filter(Boolean);
 }
 
-// Kyle's Kindle does not display sideloaded EPUBs, so Kindle delivery is
-// restricted to Amazon formats (AZW3 preferred via FORMAT_RANK, then MOBI).
-const KINDLE_DEFAULT_EXTENSIONS = ['azw3', 'mobi'];
-const KINDLE_EPUB_REFUSAL =
-  'EPUB files do not display on the Kindle; pass --dest <dir> to save the EPUB elsewhere, ' +
-  'eject the Kindle to deliver to ~/Downloads, or choose --ext azw3,mobi';
+// Kyle's Kindle displays only AZW3 files copied over USB; sideloaded EPUB and
+// MOBI files do not appear. Other formats are saved with --dest and converted
+// with `shelf convert`.
+const KINDLE_DEFAULT_EXTENSIONS = ['azw3'];
+const KINDLE_UNREADABLE_FORMATS = new Set(['epub', 'mobi']);
+const KINDLE_FORMAT_REFUSAL =
+  'EPUB and MOBI files do not display on the Kindle; pass --dest <dir> to save the file, ' +
+  'then run `shelf convert <file> --replace` to make an AZW3, or choose --ext azw3';
 
 /**
  * Resolve the format filter for this run. When delivery is headed to a
  * mounted Kindle (same detection as deliver.mjs) and --ext is absent, the
- * filter defaults to azw3,mobi. An explicit --ext that includes epub is
+ * filter defaults to azw3. An explicit --ext that includes epub or mobi is
  * refused for Kindle delivery. With --dest set or no Kindle mounted, --ext
  * passes through unchanged (empty = every format).
  *
@@ -228,26 +230,26 @@ export function resolveFormats({ ext, dest, env, mountDefault } = {}) {
   const kindle = decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
   if (!kindle) return { extensions, kindle };
   if (!extensions.length) return { extensions: [...KINDLE_DEFAULT_EXTENSIONS], kindle };
-  if (extensions.includes('epub')) return { extensions, kindle, error: KINDLE_EPUB_REFUSAL };
+  if (extensions.some((e) => KINDLE_UNREADABLE_FORMATS.has(e))) return { extensions, kindle, error: KINDLE_FORMAT_REFUSAL };
   return { extensions, kindle };
 }
 
 /**
- * Error message when a file of `format` would land on the Kindle as an EPUB,
+ * Error message when a file of `format` would land on the Kindle as an EPUB or MOBI,
  * else null. Covers paths where the format is only known after download
  * (--source-id, or a candidate whose format the search left blank).
  *
  * @param {{ format?: string, dest?: string, env?: Record<string, string|undefined>, mountDefault?: string }} opts
  * @returns {string|null}
  */
-export function kindleEpubError({ format, dest, env, mountDefault } = {}) {
-  if (String(format || '').toLowerCase() !== 'epub') return null;
+export function kindleFormatError({ format, dest, env, mountDefault } = {}) {
+  if (!KINDLE_UNREADABLE_FORMATS.has(String(format || '').toLowerCase())) return null;
   const kindle = decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
-  return kindle ? KINDLE_EPUB_REFUSAL : null;
+  return kindle ? KINDLE_FORMAT_REFUSAL : null;
 }
 
 async function refuseEpubOnKindle(format, dest, stagingDir) {
-  const error = kindleEpubError({ format, dest });
+  const error = kindleFormatError({ format, dest });
   if (!error) return;
   await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
   fail(EXIT.USAGE, error);

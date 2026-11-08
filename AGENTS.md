@@ -92,7 +92,7 @@ npm run shelf -- profile --json   # genre mix (calibration target), repeat autho
 
 ```bash
 npm run shelf -- retrieve --isbn <isbn> --json
-npm run shelf -- retrieve --title "..." --author "..." --ext azw3,mobi --english --json
+npm run shelf -- retrieve --title "..." --author "..." --ext azw3 --english --json
 npm run shelf -- retrieve --isbn <isbn> --dry-run --json     # rank without downloading
 npm run shelf -- retrieve --source-id zlib:r9bkkbjyzB --json # exact pick (skip search+rank)
 npm run shelf -- retrieve --batch series.txt --ext azw3 --json  # one book per line; `-` reads stdin
@@ -118,10 +118,11 @@ Delivery destination (set by `retrieve/deliver.mjs`):
 - `~/Downloads/` otherwise (`kind: "downloads"`)
 - `<dir>` when `--dest <dir>` is given (`kind: "override"`)
 
-Kindle delivery never carries an EPUB (the Kindle does not display sideloaded EPUBs):
-with the Kindle mounted and no `--dest`, `--ext` defaults to `azw3,mobi`, and an EPUB
-(explicit `--ext epub`, or a `--source-id` download that turns out to be EPUB) exits 2
-with a message to use `--dest`.
+Kindle delivery carries only AZW3 (the Kindle does not display sideloaded EPUB or MOBI):
+with the Kindle mounted and no `--dest`, `--ext` defaults to `azw3`, and an EPUB or MOBI
+(explicit `--ext`, or a `--source-id` download that turns out to be one) exits 2 with a
+message to use `--dest`. When no AZW3 exists, save the file with `--dest <dir>` and run
+`convert` on it.
 
 Filename is the slugified title without series text ("Slough House 4: Spook Street" →
 `spook-street.azw3`) + format extension.

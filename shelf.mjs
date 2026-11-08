@@ -111,7 +111,7 @@ program
   .option('--isbn <isbn>', 'preferred identifier; wins over title/author when both are given')
   .option('--title <title>', 'book title (quote it); requires --author')
   .option('--author <author>', 'author name (quote it); requires --title')
-  .option('--ext <list>', 'comma-list of acceptable formats (e.g. azw3,mobi) — drops everything else; defaults to azw3,mobi when delivering to a mounted Kindle (EPUB is refused there — use --dest), otherwise all formats')
+  .option('--ext <list>', 'comma-list of acceptable formats (e.g. azw3,epub) — drops everything else; defaults to azw3 when delivering to a mounted Kindle (EPUB and MOBI are refused there — use --dest, then `shelf convert`), otherwise all formats')
   .option('--max-mb <n>', 'skip files larger than this (likely OCR scans / audiobook zips)')
   .option('--english', 'drop candidates whose language is explicitly non-English')
   .option('--dest <dir>', 'force destination dir (overrides Kindle-mount detection)')
