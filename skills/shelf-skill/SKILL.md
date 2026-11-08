@@ -106,6 +106,7 @@ shelf next <flags> --json
 ```
 
 Read the JSON from stdout. If it exits with a `NOT_BUILT` error:
+
 - "no embedding cache" → `shelf embed` (vector cache is git-ignored, so a fresh
   clone needs it once; ~a few seconds), then retry.
 - "no recommendations.json" → `shelf build`, then retry.
@@ -145,16 +146,19 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
 1. **Pin the title + author** (or ISBN). Pull it from the conversation (e.g. the book you
    just recommended), or ask. ISBN wins when you have it — it's the most precise query.
 2. **Run the retrieve:**
+
    ```bash
    shelf retrieve --isbn <isbn> --json
    # or
    shelf retrieve --title "..." --author "..." --english --json
    ```
-   Kyle's Kindle does not display sideloaded EPUBs. When the Kindle is mounted and
-   `--dest` is not set, the format filter defaults to `azw3,mobi` (AZW3 preferred), and an
-   EPUB bound for the Kindle is refused with a usage error (use `--dest` for an EPUB).
-   Otherwise the engine prefers AZW3, then EPUB, then MOBI, then PDF (poor reflow).
-   Add `--ext <list>` to be strict, `--english` to drop
+   Kyle's Kindle shows only **AZW3** files copied over USB; sideloaded EPUBs do not appear.
+   When the Kindle is mounted and `--dest` is not set, the format filter defaults to
+   `azw3,mobi` (AZW3 preferred), and an EPUB bound for the Kindle is refused with a usage
+   error. If no AZW3 exists, retrieve the best EPUB or MOBI with `--dest <dir>`, then run
+   `shelf convert <file> --replace` to make an AZW3 (needs Calibre) and copy it to
+   `/Volumes/Kindle/documents/`. Otherwise the engine prefers AZW3, then EPUB, then MOBI,
+   then PDF (poor reflow). Add `--ext <list>` to be strict, `--english` to drop
    non-English editions, `--max-mb <n>` to skip likely OCR scans / audiobook zips.
 3. **Preview first when the pick is uncertain:** `--dry-run` searches and ranks without
    downloading, returning `picked` + `alternatives`. If the heuristic picked wrong,
@@ -235,10 +239,12 @@ resolved entry before writing. If he gives a one-line take on the book, pass it 
 
 **After adding, fold the book into the engine** so it's excluded from future
 recommendations and shifts his taste centroids:
+
 ```bash
 shelf fetch && shelf embed && shelf build
 shelf export   # sync books.json + recommend.ts into the website, then commit there
 ```
+
 `fetch` hits Open Library (~90s); skip it if you only need the new book in the exclusion
 set and centroids (then just `embed` + `build`). Commit `books.json` + the regenerated
 `candidates.json`/`recommendations.json`; the vector cache is git-ignored.

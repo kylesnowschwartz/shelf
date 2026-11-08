@@ -123,6 +123,17 @@ program
   .action(lazy('./src/cmd-retrieve.mjs', 'run'));
 
 program
+  .command('convert')
+  .description('convert an ebook file to another format with Calibre (default azw3, the format the Kindle shows over USB)')
+  .argument('<file>', 'path to the ebook file')
+  .option('--to <format>', 'target format: azw3 | epub | mobi | pdf', 'azw3')
+  .option('--dest <dir>', 'write the result here instead of next to the input')
+  .option('--replace', 'remove the input file after a successful conversion')
+  .option('--dry-run', 'show what would be converted; write nothing')
+  .addHelpText('after', '\nRequires Calibre (ebook-convert). Found via $EBOOK_CONVERT, PATH, or /Applications/calibre.app.\n\nExamples:\n  $ shelf convert ~/Downloads/persuader.mobi\n  $ shelf convert /Volumes/Kindle/documents/persuader.mobi --replace\n  $ shelf convert book.epub --to azw3 --dest ~/Downloads --json')
+  .action(lazy('./src/cmd-convert.mjs', 'run'));
+
+program
   .command('zlib-login')
   .description('open a headed browser and persist the z-lib session (run once per ~30 days, or when retrieve reports auth expired)')
   .option('--timeout <s>', 'seconds to wait for the login to complete', '300')

@@ -152,6 +152,14 @@ const COLLECTED_EDITION_TITLES = new Set([
 
 export const isCollectedEdition = (c) => COLLECTED_EDITION_TITLES.has(cleanTitle(c.t).toLowerCase());
 
+// Read-shelf screen. A translated work can reach the pool under its
+// original-language title, which never matches the English title on the read
+// shelf, so the English edition's title and ISBN are checked as well.
+export const isAlreadyRead = (c, readKeys, readIsbns) =>
+  readKeys.has(dedupKey(c.t, c.a)) ||
+  (Boolean(c.editionTitle) && readKeys.has(dedupKey(c.editionTitle, c.a))) ||
+  (Boolean(c.isbn) && readIsbns.has(c.isbn));
+
 export async function run(opts) {
   const limit = Number(opts.limit) || 400;
   const sources = String(opts.source).split(',').map((s) => s.trim());
@@ -242,9 +250,8 @@ export async function run(opts) {
         droppedByQuality++;
         continue; // drop low-signal self-published filler
       }
+      if (isAlreadyRead(cand, readKeys, readIsbns)) continue;
       const key = dedupKey(cand.t, cand.a);
-      if (readKeys.has(key)) continue; // already read
-      if (cand.isbn && readIsbns.has(cand.isbn)) continue;
       const existing = chosen.get(key);
       if (existing) {
         if (!existing.sources.includes(cand.source)) existing.sources.push(cand.source);

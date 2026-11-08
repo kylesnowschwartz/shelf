@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error — .mjs sibling has no type declarations
-import { passesQualityGate, broadenSubjects, isSelfPublished, isCollectedEdition } from './cmd-fetch.mjs';
+import { passesQualityGate, broadenSubjects, isSelfPublished, isCollectedEdition, isAlreadyRead } from './cmd-fetch.mjs';
 // @ts-expect-error — .mjs sibling has no type declarations
 import { fromGoogleBooks } from './sources.mjs';
 
@@ -85,5 +85,28 @@ describe('isCollectedEdition', () => {
   it('keeps a real book whose title merely carries a parenthetical', () => {
     expect(isCollectedEdition({ t: 'A Wind in the Door (Time Quintet #2)' })).toBe(false);
     expect(isCollectedEdition({ t: 'The Works of Love' })).toBe(false);
+  });
+});
+
+describe('isAlreadyRead', () => {
+  // dedupKey('The Girl Who Played with Fire', 'Stieg Larsson')
+  const readKeys = new Set(['girlwhoplayedwithfire|larsson']);
+  const readIsbns = new Set(['9780307476159']);
+  const swedishWork = { t: 'Flickan som lekte med elden', a: 'Stieg Larsson' };
+
+  it('matches a translated work through its English edition title', () => {
+    expect(isAlreadyRead({ ...swedishWork, editionTitle: 'The Girl Who Played with Fire' }, readKeys, new Set())).toBe(true);
+  });
+
+  it('matches a translated work through its English edition ISBN', () => {
+    expect(isAlreadyRead({ ...swedishWork, isbn: '9780307476159' }, new Set(), readIsbns)).toBe(true);
+  });
+
+  it('matches on the candidate title alone', () => {
+    expect(isAlreadyRead({ t: 'The Girl Who Played with Fire', a: 'Stieg Larsson' }, readKeys, new Set())).toBe(true);
+  });
+
+  it('keeps a candidate that matches the read shelf on nothing', () => {
+    expect(isAlreadyRead({ ...swedishWork, editionTitle: 'Some Other Book', isbn: '9780000000000' }, readKeys, readIsbns)).toBe(false);
   });
 });

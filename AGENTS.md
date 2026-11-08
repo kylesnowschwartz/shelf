@@ -141,6 +141,16 @@ prefixes such as "Slough House 4:" are ignored). Candidates that fail the check 
 `--dry-run` merges copies of the same edition into one entry (`copies`, `otherSourceIds`)
 and lists at most 8 alternatives; `omittedCount` appears when entries were cut.
 
+Converting a file (`convert`): when `retrieve` can only find MOBI or EPUB, convert it to
+AZW3 with Calibre's `ebook-convert` (must be installed; found via `$EBOOK_CONVERT`, PATH, or
+`/Applications/calibre.app`). A file already in the target format is skipped.
+
+```bash
+npm run shelf -- convert <file> --json                 # → <file>.azw3 next to the input
+npm run shelf -- convert <file> --replace --json       # also removes the input
+npm run shelf -- convert <file> --dest <dir> --dry-run --json
+```
+
 Retrieve exit codes (same vocabulary): `5` means the source needs authentication
 or is unavailable. If it returns `"sourceCode": "SOURCE_AUTH_REQUIRED"`, re-run:
 
