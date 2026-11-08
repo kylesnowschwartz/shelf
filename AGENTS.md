@@ -123,7 +123,8 @@ with the Kindle mounted and no `--dest`, `--ext` defaults to `azw3,mobi`, and an
 (explicit `--ext epub`, or a `--source-id` download that turns out to be EPUB) exits 2
 with a message to use `--dest`.
 
-Filename is slugified safe text + format extension (e.g. `brian-robeson-01-hatchet.azw3`).
+Filename is the slugified title without series text ("Slough House 4: Spook Street" →
+`spook-street.azw3`) + format extension.
 Each result carries `picked`, `destination`, `mounted`, `kind`, `format`, `sizeBytes`,
 `alternatives[]`, `omitted[]` (candidates a hard filter dropped — surface them back).
 
@@ -132,6 +133,13 @@ Each result carries `picked`, `destination`, `mounted`, `kind`, `format`, `sizeB
 ISBN when the source stocks only ebook editions) resolves the ISBN to title and author
 via Open Library and searches by those, reporting `"matchedBy": "title"`; otherwise
 `"isbn"`. If Open Library cannot resolve the ISBN, retrieve exits `3` with the reason.
+
+A `--title` search only ranks candidates whose title and author match the request (series
+prefixes such as "Slough House 4:" are ignored). Candidates that fail the check appear in
+`omitted[]`; if none pass, retrieve exits `3` with `"matchCode": "NO_MATCH"`.
+
+`--dry-run` merges copies of the same edition into one entry (`copies`, `otherSourceIds`)
+and lists at most 8 alternatives; `omittedCount` appears when entries were cut.
 
 Retrieve exit codes (same vocabulary): `5` means the source needs authentication
 or is unavailable. If it returns `"sourceCode": "SOURCE_AUTH_REQUIRED"`, re-run:

@@ -26,8 +26,9 @@ import { deliver, decideDestination } from './retrieve/deliver.mjs';
 import { lookupIsbn } from './sources.mjs';
 
 // Format preference order. AZW3 is Amazon's native format and renders
-// reliably on every Kindle, so it leads; modern Kindles read EPUB natively
-// too. MOBI is the legacy Amazon format. PDF is the fallback because reflow
+// reliably on every Kindle, so it leads. EPUB ranks next for non-Kindle
+// destinations; delivery to a mounted Kindle refuses EPUB. MOBI is the legacy
+// Amazon format. PDF is the fallback because reflow
 // on a Kindle is poor. Any format not in this map gets pushed to the end.
 const FORMAT_RANK = { azw3: 0, epub: 1, mobi: 2, pdf: 3 };
 const formatRank = (f) => FORMAT_RANK[String(f || '').toLowerCase()] ?? 99;
