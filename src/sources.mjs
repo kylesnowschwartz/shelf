@@ -1,8 +1,8 @@
 // Candidate sources. Open Library is free-text search with no API key, the
-// keyless baseline every install gets. Google Books requires a key on every
-// request, so it is queried only when GOOGLE_BOOKS_API_KEY is set — an
-// optional enhancement for the owner's keyed clone, not a requirement for the
-// plugin's keyless users. Each fetch returns an array of raw candidate
+// keyless baseline every install gets. Google Books' subject search runs only
+// when GOOGLE_BOOKS_API_KEY is set — an optional enhancement for the owner's
+// keyed clone, not a requirement for the plugin's keyless users. Its single
+// ISBN lookup (`lookupIsbnGoogle`) is made without a key. Each fetch returns an array of raw candidate
 // records {t,a,year,isbn,pages,subjects,firstSentence,source}.
 import { getJson } from './http.mjs';
 import {
@@ -184,8 +184,8 @@ export function fromGoogleBooks(volumeInfo, source) {
 
 /**
  * Top-rated books in a subject, sourced from the Google Books volumes API — a
- * second discovery signal alongside Open Library's. Google requires an API
- * key on every request, so this source is optional: it makes no request at
+ * second discovery signal alongside Open Library's. This source runs only
+ * with an API key, so it is optional: it makes no request at
  * all when `GOOGLE_BOOKS_API_KEY` is unset, and a quota or auth failure never
  * fails the run (`optional: true`).
  */
@@ -258,4 +258,18 @@ export async function lookupIsbn(isbn, { fetchImpl } = {}) {
   const doc = data?.docs?.[0];
   if (!doc?.title || !Array.isArray(doc.author_name) || !doc.author_name.length) return null;
   return { title: doc.title, author: doc.author_name[0].trim() };
+}
+
+/**
+ * Resolve ONE ISBN to { title, author } via the Google Books volumes API,
+ * without an API key (an ISBN query is answered keyless). Returns null when
+ * no volume carries that ISBN or the volume lacks a title or author; throws
+ * when the service cannot be reached or keeps failing after retries.
+ */
+export async function lookupIsbnGoogle(isbn, { fetchImpl } = {}) {
+  const params = new URLSearchParams({ q: `isbn:${String(isbn).replace(/[^0-9Xx]/g, '')}` });
+  const data = await getJson(`${GOOGLE_BOOKS}?${params}`, { retries: 2, ...(fetchImpl ? { fetchImpl } : {}) });
+  const info = data?.items?.[0]?.volumeInfo;
+  if (!info?.title || !Array.isArray(info.authors) || !info.authors.length) return null;
+  return { title: info.title, author: info.authors[0].trim() };
 }

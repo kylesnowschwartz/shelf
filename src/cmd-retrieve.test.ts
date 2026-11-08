@@ -19,6 +19,7 @@ import {
   withSourceRetry,
   candidateHasIsbn,
   searchWithIsbnFallback,
+  resolveIsbn,
   resolveFormats,
   kindleFormatError,
   editionTitleKey,
@@ -352,6 +353,12 @@ describe('candidateHasIsbn', () => {
   });
 });
 
+/** One lookup service named `name` that answers with `fn`. */
+const service = (name: string, fn: (isbn: string) => Promise<any>) => ({ name, lookup: fn });
+const throwing = (message: string) => async () => {
+  throw new Error(message);
+};
+
 describe('searchWithIsbnFallback', () => {
   /** A source stub that answers each search with `answer(query)` and records the queries. */
   function stubSource(answer: (q: any) => any[]) {
@@ -365,10 +372,8 @@ describe('searchWithIsbnFallback', () => {
 
   it('keeps the isbn search when a candidate carries the requested isbn', async () => {
     const { queries, source } = stubSource(() => [cand({ isbn: '9781616952259' })]);
-    const lookup = async () => {
-      throw new Error('should not be called');
-    };
-    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, { lookup });
+    const lookups = [service('Open Library', throwing('should not be called'))];
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, { lookups });
     expect(found.matchedBy).toBe('isbn');
     expect(queries).toHaveLength(1);
   });
@@ -376,11 +381,13 @@ describe('searchWithIsbnFallback', () => {
   it('resolves the isbn via the lookup and searches by title when only other editions come back', async () => {
     const ebook = cand({ sourceId: 'zlib:ebook', isbn: '9781616952266' });
     const { queries, source } = stubSource((q) => (q.isbn ? [] : [ebook]));
-    const lookup = async (isbn: string) => {
-      expect(isbn).toBe('9781616952259');
-      return { title: 'Dead Lions', author: 'Mick Herron' };
-    };
-    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259', extensions: ['epub'] }, { lookup });
+    const lookups = [
+      service('Open Library', async (isbn: string) => {
+        expect(isbn).toBe('9781616952259');
+        return { title: 'Dead Lions', author: 'Mick Herron' };
+      }),
+    ];
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259', extensions: ['epub'] }, { lookups });
     expect(found.matchedBy).toBe('title');
     expect(found.result.candidates).toEqual([ebook]);
     expect(queries[1]).toEqual({ title: 'Dead Lions', author: 'Mick Herron', extensions: ['epub'] });
@@ -389,7 +396,7 @@ describe('searchWithIsbnFallback', () => {
   it('falls back when the isbn search returns candidates without the requested isbn', async () => {
     const { queries, source } = stubSource((q) => (q.isbn ? [cand({ isbn: '9780000000000' })] : [cand()]));
     const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
-      lookup: async () => ({ title: 'Dead Lions', author: 'Mick Herron' }),
+      lookups: [service('Open Library', async () => ({ title: 'Dead Lions', author: 'Mick Herron' }))],
     });
     expect(found.matchedBy).toBe('title');
     expect(queries).toHaveLength(2);
@@ -398,7 +405,7 @@ describe('searchWithIsbnFallback', () => {
   it('returns the resolved title and author so the title gate can check candidates against them', async () => {
     const { source } = stubSource((q) => (q.isbn ? [] : [cand()]));
     const found = await searchWithIsbnFallback(source, { isbn: '9781616956479' }, {
-      lookup: async () => ({ title: 'Spook Street', author: 'Mick Herron' }),
+      lookups: [service('Open Library', async () => ({ title: 'Spook Street', author: 'Mick Herron' }))],
     });
     expect(found.requested).toEqual({ title: 'Spook Street', author: 'Mick Herron' });
     const other = cand({ title: 'The Secret Hours', authors: ['Mick Herron'] });
@@ -407,29 +414,57 @@ describe('searchWithIsbnFallback', () => {
 
   it('uses the caller title and author instead of the lookup when both are given', async () => {
     const { queries, source } = stubSource((q) => (q.isbn ? [] : [cand()]));
-    const lookup = async () => {
-      throw new Error('should not be called');
-    };
-    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259', title: 'Dead Lions', author: 'Mick Herron' }, { lookup });
+    const lookups = [service('Open Library', throwing('should not be called'))];
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259', title: 'Dead Lions', author: 'Mick Herron' }, { lookups });
     expect(found.matchedBy).toBe('title');
     expect(queries[1]).toMatchObject({ title: 'Dead Lions', author: 'Mick Herron' });
   });
 
-  it('reports unresolved when the lookup has no record for the isbn', async () => {
+  it('reports unresolved with no outage when every lookup has no record for the isbn', async () => {
     const { queries, source } = stubSource(() => []);
-    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, { lookup: async () => null });
-    expect(found.unresolved).toMatch(/Open Library has no title/);
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
+      lookups: [service('Open Library', async () => null), service('Google Books', async () => null)],
+    });
+    expect(found.unresolved).toMatch(/Open Library and Google Books have no title/);
+    expect(found.lookupUnreachable).toBe(false);
     expect(queries).toHaveLength(1);
   });
 
-  it('reports unresolved when the lookup fails', async () => {
+  it('reports an outage when every lookup throws', async () => {
     const { source } = stubSource(() => []);
     const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
-      lookup: async () => {
-        throw new Error('openlibrary.org 503 after 3 retries');
-      },
+      lookups: [
+        service('Open Library', throwing('openlibrary.org 503 after 3 retries')),
+        service('Google Books', throwing('fetch failed')),
+      ],
     });
-    expect(found.unresolved).toMatch(/lookup for it failed \(openlibrary.org 503/);
+    expect(found.lookupUnreachable).toBe(true);
+    expect(found.unresolved).toMatch(/could not be reached \(Open Library: openlibrary.org 503 after 3 retries; Google Books: fetch failed\)/);
+  });
+
+  it('searches by the Google Books title when Open Library throws', async () => {
+    const ebook = cand({ sourceId: 'zlib:ebook' });
+    const { queries, source } = stubSource((q) => (q.isbn ? [] : [ebook]));
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
+      lookups: [
+        service('Open Library', throwing('openlibrary.org 503 after 3 retries')),
+        service('Google Books', async () => ({ title: 'Dead Lions', author: 'Mick Herron' })),
+      ],
+    });
+    expect(found.matchedBy).toBe('title');
+    expect(found.requested).toEqual({ title: 'Dead Lions', author: 'Mick Herron' });
+    expect(queries[1]).toMatchObject({ title: 'Dead Lions', author: 'Mick Herron' });
+  });
+
+  it('searches by the Google Books title when Open Library has no record', async () => {
+    const { source } = stubSource((q) => (q.isbn ? [] : [cand()]));
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
+      lookups: [
+        service('Open Library', async () => null),
+        service('Google Books', async () => ({ title: 'Dead Lions', author: 'Mick Herron' })),
+      ],
+    });
+    expect(found.requested).toEqual({ title: 'Dead Lions', author: 'Mick Herron' });
   });
 
   it('searches by title with matchedBy "title" when no isbn is given', async () => {
@@ -437,6 +472,35 @@ describe('searchWithIsbnFallback', () => {
     const found = await searchWithIsbnFallback(source, { title: 'Dead Lions', author: 'Mick Herron' });
     expect(found.matchedBy).toBe('title');
     expect(queries).toEqual([{ title: 'Dead Lions', author: 'Mick Herron', extensions: undefined }]);
+  });
+});
+
+describe('resolveIsbn', () => {
+  it('stops at the first service with a record', async () => {
+    let googleAsked = false;
+    const r = await resolveIsbn('9781616952259', [
+      service('Open Library', async () => ({ title: 'Dead Lions', author: 'Mick Herron' })),
+      service('Google Books', async () => {
+        googleAsked = true;
+        return null;
+      }),
+    ]);
+    expect(r).toEqual({ resolved: { title: 'Dead Lions', author: 'Mick Herron' } });
+    expect(googleAsked).toBe(false);
+  });
+
+  it('counts an outage when one service throws and the other has no record', async () => {
+    const r = await resolveIsbn('9781616952259', [
+      service('Open Library', throwing('openlibrary.org 503 after 3 retries')),
+      service('Google Books', async () => null),
+    ]);
+    expect(r.lookupUnreachable).toBe(true);
+    expect(r.unresolved).toMatch(/Google Books had no record/);
+  });
+
+  it('tries Open Library first, then Google Books, by default', async () => {
+    const { ISBN_LOOKUPS } = await import('./cmd-retrieve.mjs');
+    expect(ISBN_LOOKUPS.map((l: any) => l.name)).toEqual(['Open Library', 'Google Books']);
   });
 });
 

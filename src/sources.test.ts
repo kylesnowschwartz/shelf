@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 // @ts-expect-error — .mjs sibling has no type declarations
-import { lookupBook, lookupIsbn, fromOpenLibrary, isByQueriedAuthor, googleBySubject, fromGoogleBooks } from './sources.mjs';
+import { lookupBook, lookupIsbn, lookupIsbnGoogle, fromOpenLibrary, isByQueriedAuthor, googleBySubject, fromGoogleBooks } from './sources.mjs';
 
 /** A Response-shaped stub carrying only what getJson reads. */
 function reply(body: unknown) {
@@ -90,6 +90,30 @@ describe('lookupIsbn', () => {
   it('returns null when Open Library has no record for the isbn', async () => {
     const { fetchImpl } = stubFetch({ docs: [] });
     expect(await lookupIsbn('9780000000000', { fetchImpl })).toBeNull();
+  });
+});
+
+describe('lookupIsbnGoogle', () => {
+  it('asks the Google Books volumes API by isbn, without a key, and returns the title and first author', async () => {
+    const { urls, fetchImpl } = stubFetch({ items: [{ volumeInfo: { title: 'Dead Lions', authors: ['Mick Herron'] } }] });
+    const hit = await lookupIsbnGoogle('978-1-61695-225-9', { fetchImpl });
+    expect(hit).toEqual({ title: 'Dead Lions', author: 'Mick Herron' });
+    const url = new URL(urls[0]);
+    expect(url.origin + url.pathname).toBe('https://www.googleapis.com/books/v1/volumes');
+    expect(url.searchParams.get('q')).toBe('isbn:9781616952259');
+    expect(url.searchParams.has('key')).toBe(false);
+  });
+
+  it('returns null when no volume carries the isbn', async () => {
+    const { fetchImpl } = stubFetch({ totalItems: 0 });
+    expect(await lookupIsbnGoogle('9780000000000', { fetchImpl })).toBeNull();
+  });
+
+  it('throws when the service cannot be reached', async () => {
+    const fetchImpl = async () => {
+      throw new TypeError('fetch failed');
+    };
+    await expect(lookupIsbnGoogle('9781616952259', { fetchImpl })).rejects.toThrow(/fetch failed/);
   });
 });
 

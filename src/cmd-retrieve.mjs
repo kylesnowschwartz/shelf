@@ -23,7 +23,7 @@ import { join } from 'node:path';
 import { log, emit, fail, EXIT } from './output.mjs';
 import * as zlib from './retrieve/sources/zlib.mjs';
 import { deliver, decideDestination } from './retrieve/deliver.mjs';
-import { lookupIsbn } from './sources.mjs';
+import { lookupIsbn, lookupIsbnGoogle } from './sources.mjs';
 
 // Format preference order. AZW3 is Amazon's native format and renders
 // reliably on every Kindle, so it leads. EPUB ranks next for non-Kindle
@@ -92,6 +92,11 @@ export async function run(opts /*, command */) {
       }),
     );
     if (found.unresolved) {
+      if (found.lookupUnreachable) {
+        fail(EXIT.NETWORK, `source has no copy with isbn ${isbn}, and ${found.unresolved}; retry later`, {
+          sourceCode: 'ISBN_LOOKUP_UNAVAILABLE',
+        });
+      }
       fail(EXIT.NO_DATA, `source has no copy with isbn ${isbn}, and ${found.unresolved}`);
     }
     ({ result, matchedBy } = found);
@@ -576,22 +581,67 @@ export function candidateHasIsbn(c, isbn) {
 }
 
 /**
+ * The services that resolve an ISBN to a title and author, asked in order
+ * until one has a record. Both are keyless.
+ */
+export const ISBN_LOOKUPS = [
+  { name: 'Open Library', lookup: lookupIsbn },
+  { name: 'Google Books', lookup: lookupIsbnGoogle },
+];
+
+/**
+ * Resolve an ISBN to { title, author } by asking each lookup service in turn.
+ * Returns { resolved } from the first service with a record. Otherwise returns
+ * { unresolved: reason, lookupUnreachable }: `lookupUnreachable` is true when
+ * any service threw (network failure, server errors after retries), because
+ * an unanswered lookup cannot show that the book has no record; it is false
+ * only when every service answered with no record.
+ *
+ * @param {string} isbn
+ * @param {{ name: string, lookup: (isbn: string) => Promise<{ title: string, author: string } | null> }[]} lookups
+ */
+export async function resolveIsbn(isbn, lookups = ISBN_LOOKUPS) {
+  const noRecord = [];
+  const failed = [];
+  for (const { name, lookup } of lookups) {
+    try {
+      const resolved = await lookup(isbn);
+      if (resolved) return { resolved };
+      noRecord.push(name);
+      log(`source: ${name} has no title and author for isbn ${isbn}`);
+    } catch (err) {
+      failed.push(`${name}: ${err.message}`);
+      log(`source: ${name} lookup for isbn ${isbn} failed (${err.message})`);
+    }
+  }
+  if (failed.length) {
+    const also = noRecord.length ? `; ${noRecord.join(' and ')} had no record` : '';
+    return {
+      unresolved: `the ISBN lookup service could not be reached (${failed.join('; ')})${also}`,
+      lookupUnreachable: true,
+    };
+  }
+  return { unresolved: `${noRecord.join(' and ')} have no title and author for it`, lookupUnreachable: false };
+}
+
+/**
  * Search the source, falling back from ISBN to title + author. A print ISBN
  * often finds nothing at a source that stocks only the ebook editions, which
  * carry different ISBNs. When the ISBN search returns no candidate carrying
  * the requested ISBN, the ISBN is resolved to a title and author (the
- * caller's --title/--author when both are given, otherwise Open Library) and
+ * caller's --title/--author when both are given, otherwise `resolveIsbn`) and
  * the source is searched again by those.
  *
  * Returns { result, matchedBy: 'isbn' | 'title', requested? }. `requested` is the
- * title and author the fallback searched for. Returns { unresolved: reason }
- * when the fallback could not find a title and author for the ISBN.
+ * title and author the fallback searched for. Returns
+ * { unresolved: reason, lookupUnreachable } when the fallback could not find a
+ * title and author for the ISBN (see `resolveIsbn`).
  *
  * @param {{ search: Function }} source
  * @param {{ isbn?: string, title?: string, author?: string, extensions?: string[] }} query
- * @param {{ lookup?: (isbn: string) => Promise<{ title: string, author: string } | null> }} [deps]
+ * @param {{ lookups?: typeof ISBN_LOOKUPS }} [deps]
  */
-export async function searchWithIsbnFallback(source, { isbn, title, author, extensions }, { lookup = lookupIsbn } = {}) {
+export async function searchWithIsbnFallback(source, { isbn, title, author, extensions }, { lookups = ISBN_LOOKUPS } = {}) {
   if (!isbn) {
     return { result: await source.search({ title, author, extensions }), matchedBy: 'title' };
   }
@@ -602,13 +652,10 @@ export async function searchWithIsbnFallback(source, { isbn, title, author, exte
 
   let resolved = title && author ? { title, author } : null;
   if (!resolved) {
-    log(`source: no candidate carries isbn ${isbn}; resolving it to a title via Open Library`);
-    try {
-      resolved = await lookup(isbn);
-    } catch (err) {
-      return { unresolved: `the Open Library lookup for it failed (${err.message})` };
-    }
-    if (!resolved) return { unresolved: 'Open Library has no title and author for it' };
+    log(`source: no candidate carries isbn ${isbn}; resolving it to a title and author`);
+    const lookedUp = await resolveIsbn(isbn, lookups);
+    if (!lookedUp.resolved) return lookedUp;
+    resolved = lookedUp.resolved;
   }
   log(`source: searching for "${resolved.title}" by ${resolved.author}`);
   const byTitle = await source.search({ title: resolved.title, author: resolved.author, extensions });

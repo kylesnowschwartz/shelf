@@ -134,8 +134,11 @@ Each result carries `picked`, `destination`, `mounted`, `kind`, `format`, `sizeB
 `matchedBy` (also in `--dry-run` output) says which search found the candidates. An
 `--isbn` search that finds no candidate carrying that exact ISBN (common for a print
 ISBN when the source stocks only ebook editions) resolves the ISBN to title and author
-via Open Library and searches by those, reporting `"matchedBy": "title"`; otherwise
-`"isbn"`. If Open Library cannot resolve the ISBN, retrieve exits `3` with the reason.
+via Open Library, then the Google Books volumes API (no key needed), and searches by
+those, reporting `"matchedBy": "title"`; otherwise `"isbn"`. If every lookup answers with
+no record, retrieve exits `3`. If a lookup could not be reached and none found the book,
+retrieve exits `5` with `"sourceCode": "ISBN_LOOKUP_UNAVAILABLE"`: the book may exist, so
+retry later or pass `--title` and `--author`.
 
 A `--title` search only ranks candidates whose title and author match the request (series
 prefixes such as "Slough House 4:" are ignored; a number that is part of the title, as in

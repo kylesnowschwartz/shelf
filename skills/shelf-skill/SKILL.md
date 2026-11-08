@@ -221,8 +221,10 @@ only invoke it when `retrieve` has explicitly said auth expired.
 ### Exit codes
 
 `5` = source needs login or is unavailable (suggest `zlib-login` if `sourceCode` is
-`SOURCE_AUTH_REQUIRED`, otherwise plain retry); `3` = no matching copy found; `2` = bad
-flags (needs `--isbn` or `--title`+`--author`).
+`SOURCE_AUTH_REQUIRED`, otherwise plain retry). `sourceCode: "ISBN_LOOKUP_UNAVAILABLE"`
+means the services that turn an ISBN into a title could not be reached — the book may
+exist, so retry later or re-run with `--title` + `--author`. `3` = no matching copy found;
+`2` = bad flags (needs `--isbn` or `--title`+`--author`).
 ---
 
 ## Add to library
