@@ -9,7 +9,21 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason, withSourceRetry, candidateHasIsbn, searchWithIsbnFallback, resolveFormats, kindleEpubError } from './cmd-retrieve.mjs';
+import {
+  rejectReason,
+  qualityScore,
+  rankIndexedCandidates,
+  normalizeTitle,
+  mismatchReason,
+  withSourceRetry,
+  candidateHasIsbn,
+  searchWithIsbnFallback,
+  resolveFormats,
+  kindleEpubError,
+  editionTitleKey,
+  publisherFamily,
+  compactCandidates,
+} from './cmd-retrieve.mjs';
 import { SourceError } from './retrieve/sources/zlib.mjs';
 
 const cand = (overrides = {}) => ({
@@ -406,5 +420,92 @@ describe('resolveFormats (Kindle format default)', () => {
     expect(kindleEpubError({ format: 'azw3', env: kindleEnv() })).toBeNull();
     expect(kindleEpubError({ format: 'epub', dest: '/tmp/books', env: kindleEnv() })).toBeNull();
     expect(kindleEpubError({ format: 'epub', ...noKindle })).toBeNull();
+  });
+});
+
+
+describe('editionTitleKey', () => {
+  it('drops bracketed series asides and punctuation', () => {
+    expect(editionTitleKey('Slow Horses (Slough House #1)')).toBe('slow horses');
+    expect(editionTitleKey('Slow Horses [Slough House 1]')).toBe('slow horses');
+  });
+
+  it('drops a leading numbered series prefix', () => {
+    expect(editionTitleKey('Slough House 1 - Slow Horses')).toBe('slow horses');
+    expect(editionTitleKey('Slough House #1: Slow Horses')).toBe('slow horses');
+  });
+
+  it('keeps titles that merely start with a number or contain a colon', () => {
+    expect(editionTitleKey('1984: A Novel')).toBe('1984 a novel');
+    expect(editionTitleKey('Dune: Messiah')).toBe('dune messiah');
+  });
+});
+
+describe('publisherFamily', () => {
+  it('groups imprints of the same house', () => {
+    expect(publisherFamily('Hachette UK')).toBe('hachette');
+    expect(publisherFamily('Hachette Book Group')).toBe('hachette');
+    expect(publisherFamily('The Penguin Press')).toBe('penguin');
+  });
+
+  it('maps missing and Telegram-handle publishers to empty', () => {
+    expect(publisherFamily(null)).toBe('');
+    expect(publisherFamily('@bookchannel')).toBe('');
+  });
+});
+
+describe('compactCandidates', () => {
+  const sameEdition = { title: 'Slow Horses', publisher: 'John Murray', year: 2010, format: 'epub' };
+
+  it('collapses copies of one edition behind the best-ranked copy', () => {
+    const { picked, alternatives, omittedCount } = compactCandidates([
+      cand({ ...sameEdition, sourceId: 'zlib:best', quality: 5 }),
+      cand({ ...sameEdition, title: 'Slow Horses (Slough House #1)', publisher: 'John Murray Publishers', sourceId: 'zlib:dup1' }),
+      cand({ ...sameEdition, format: 'pdf', sourceId: 'zlib:pdf' }),
+      cand({ ...sameEdition, sourceId: 'zlib:dup2' }),
+    ]);
+    expect(picked.sourceId).toBe('zlib:best');
+    expect(picked.quality).toBe(5);
+    expect(picked.copies).toBe(3);
+    expect(picked.otherSourceIds).toEqual(['zlib:dup1', 'zlib:dup2']);
+    expect(alternatives.map((a) => a.sourceId)).toEqual(['zlib:pdf']);
+    expect(alternatives[0].copies).toBe(1);
+    expect(alternatives[0].otherSourceIds).toEqual([]);
+    expect(omittedCount).toBeUndefined();
+  });
+
+  it('keeps editions apart when year, publisher family or format differ', () => {
+    const { alternatives } = compactCandidates([
+      cand({ ...sameEdition, sourceId: 'zlib:a' }),
+      cand({ ...sameEdition, year: 2011, sourceId: 'zlib:b' }),
+      cand({ ...sameEdition, publisher: 'Soho Crime', sourceId: 'zlib:c' }),
+      cand({ ...sameEdition, format: 'azw3', sourceId: 'zlib:d' }),
+    ]);
+    expect(alternatives.map((a) => a.sourceId)).toEqual(['zlib:b', 'zlib:c', 'zlib:d']);
+  });
+
+  it('keeps the original candidate fields on every entry', () => {
+    const { picked } = compactCandidates([cand({ sourceId: 'zlib:a', isbn: '123' })]);
+    expect(picked).toMatchObject(cand({ sourceId: 'zlib:a', isbn: '123' }));
+  });
+
+  it('caps alternatives at 8 and reports how many were cut', () => {
+    const ranked = Array.from({ length: 12 }, (_, i) => cand({ title: `Book ${i}`, sourceId: `zlib:${i}` }));
+    const { picked, alternatives, omittedCount } = compactCandidates(ranked);
+    expect(picked.sourceId).toBe('zlib:0');
+    expect(alternatives).toHaveLength(8);
+    expect(alternatives.at(-1).sourceId).toBe('zlib:8');
+    expect(omittedCount).toBe(3);
+  });
+
+  it('counts the cap after grouping, and honours a custom limit', () => {
+    const ranked = [
+      cand({ title: 'A', sourceId: 'zlib:a' }),
+      cand({ title: 'B', sourceId: 'zlib:b1' }),
+      cand({ title: 'B', sourceId: 'zlib:b2' }),
+      cand({ title: 'C', sourceId: 'zlib:c' }),
+    ];
+    expect(compactCandidates(ranked, { limit: 2 })).not.toHaveProperty('omittedCount');
+    expect(compactCandidates(ranked, { limit: 1 }).omittedCount).toBe(1);
   });
 });
