@@ -63,8 +63,27 @@ export function decideDestination({
  */
 const ALLOWED_FORMATS = new Set(['epub', 'azw3', 'mobi', 'pdf', 'txt']);
 
+/**
+ * Strip series text from a source title so the file sorts by the book's own
+ * name: a leading `<Series> N:` prefix ("Slough House 4: Spook Street") and a
+ * trailing `(<Series> N)` suffix ("London Rules (Slough House 5)"). The series
+ * name must contain a letter and the number is one or two digits (optionally
+ * `#`-prefixed or decimal, e.g. `#4`, `4.5`), so titles such as "1984: A Novel",
+ * "Fahrenheit 451: A Novel" or "Standing by the Wall: The Collected Slough
+ * House Novellas" keep their colon. Returns the input unchanged when stripping
+ * would leave nothing.
+ */
+const SERIES_PREFIX = /^\s*[^:]*[a-z][^:]*?[\s,]+(?:book\s+|#)?\d{1,2}(?:\.\d+)?\s*:\s*/i;
+const SERIES_SUFFIX = /\s*\([^()]*[a-z][^()]*?[\s,]+(?:book\s+|#)?\d{1,2}(?:\.\d+)?\s*\)\s*$/i;
+
+export function cleanTitle(title) {
+  if (typeof title !== 'string') return title;
+  const cleaned = title.replace(SERIES_PREFIX, '').replace(SERIES_SUFFIX, '').trim();
+  return cleaned || title;
+}
+
 export function safeFilename({ title, format }) {
-  const slug = (title && slugify(title)) || 'book';
+  const slug = (title && slugify(cleanTitle(title))) || 'book';
   const ext = (format || 'epub').replace(/[^a-z0-9]/gi, '').toLowerCase();
   const safeExt = ALLOWED_FORMATS.has(ext) ? ext : 'epub';
   return `${slug}.${safeExt}`;
