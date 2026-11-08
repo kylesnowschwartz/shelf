@@ -84,9 +84,26 @@ export async function run(opts /*, command */) {
   }
 
   // ─── 3. filter ──────────────────────────────────────────────────────────
+  // Title gate first: ranking never sees a different book by the same author.
   const filtered = [];
   const omitted = [];
-  for (const c of result.candidates) {
+  let matched = result.candidates;
+  if (title) {
+    matched = [];
+    for (const c of result.candidates) {
+      const reason = mismatchReason(c, { title, author });
+      if (reason) omitted.push({ candidate: c, reason });
+      else matched.push(c);
+    }
+    if (!matched.length) {
+      fail(EXIT.NO_DATA, 'no candidate matches the requested title and author', {
+        matchCode: 'NO_MATCH',
+        requested: { title, author },
+        omitted,
+      });
+    }
+  }
+  for (const c of matched) {
     const reason = rejectReason(c, { extensions, maxBytes, english: !!opts.english });
     if (reason) omitted.push({ candidate: c, reason });
     else filtered.push(c);
@@ -194,6 +211,69 @@ export function rejectReason(c, { extensions = [], maxBytes = null, english = fa
   }
   if (c.sizeBytes != null && c.sizeBytes < MIN_BYTES) {
     return `size ${c.sizeBytes} bytes — likely a sample, not a full book`;
+  }
+  return null;
+}
+
+/**
+ * Reduce a book title to its comparable core: lower case, diacritics and
+ * punctuation removed, a leading article dropped, trailing parentheticals
+ * ("London Rules (Slough House 5)"), a numbered series prefix
+ * ("Slough House 4: Spook Street", "DCC-02. ...") and a subtitle after ":" or
+ * " - " stripped.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+export function normalizeTitle(s) {
+  let t = String(s || '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+  let prev;
+  do {
+    prev = t;
+    t = t.replace(/\s*[([][^()[\]]*[)\]]\s*$/, '').trim();
+  } while (t !== prev);
+  t = t.replace(/^.{0,60}?\d+\s*(?:[:.]|\s[-–—])\s+/, '');
+  t = t.split(/\s*:\s*|\s+[-–—]\s+/)[0];
+  return t
+    .replace(/&/g, ' and ')
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/^(?:the|a|an)\s+/, '');
+}
+
+/** Lower-case word tokens of a person's name, diacritics removed. */
+function nameTokens(s) {
+  return String(s || '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+/**
+ * Why a candidate is not the requested book, or null when it is. The title
+ * must match after `normalizeTitle`. When an author is given and the
+ * candidate lists authors, the requested surname (last name token) must
+ * appear in one of them; a candidate with no author data passes on title.
+ *
+ * @param {{ title?: string, authors?: string[] }} c
+ * @param {{ title: string, author?: string }} req
+ * @returns {string|null}
+ */
+export function mismatchReason(c, { title, author } = {}) {
+  if (normalizeTitle(c.title) !== normalizeTitle(title)) {
+    return `title "${c.title}" does not match "${title}"`;
+  }
+  const surname = nameTokens(author).at(-1);
+  const authors = Array.isArray(c.authors) ? c.authors : [];
+  if (surname && authors.length && !authors.some((a) => nameTokens(a).includes(surname))) {
+    return `author ${authors.join(', ')} does not match "${author}"`;
   }
   return null;
 }

@@ -6,7 +6,7 @@
 // format preference + quality + source order.
 
 import { describe, it, expect } from 'vitest';
-import { rejectReason, qualityScore, rankIndexedCandidates } from './cmd-retrieve.mjs';
+import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason } from './cmd-retrieve.mjs';
 
 const cand = (overrides = {}) => ({
   sourceId: 'zlib:x',
@@ -178,5 +178,55 @@ describe('rankIndexedCandidates', () => {
       cand({ format: 'pdf', sourceId: 'zlib:p' }),
     ]).sort(rankIndexedCandidates);
     expect(order(ranked)).toEqual(['zlib:a', 'zlib:p', 'zlib:dj']);
+  });
+});
+
+describe('normalizeTitle', () => {
+  it('strips a numbered series prefix', () => {
+    expect(normalizeTitle('Slough House 4: Spook Street')).toBe('spook street');
+    expect(normalizeTitle("DCC-02. Carl's Doomsday Scenario")).toBe('carls doomsday scenario');
+  });
+
+  it('strips a trailing series parenthetical', () => {
+    expect(normalizeTitle('London Rules (Slough House 5)')).toBe('london rules');
+  });
+
+  it('drops a leading article, case, and punctuation', () => {
+    expect(normalizeTitle('The Secret Hours!')).toBe('secret hours');
+  });
+
+  it('drops a subtitle', () => {
+    expect(normalizeTitle('Slow Horses: A Slough House Thriller')).toBe('slow horses');
+  });
+});
+
+describe('mismatchReason', () => {
+  const req = { title: 'Slow Horses', author: 'Mick Herron' };
+
+  it('rejects a different book by the same author', () => {
+    expect(mismatchReason(cand({ title: 'The Secret Hours', authors: ['Mick Herron'] }), req)).toMatch(/title/);
+  });
+
+  it('accepts the requested book', () => {
+    expect(mismatchReason(cand({ title: 'Slow Horses', authors: ['Mick Herron'] }), req)).toBeNull();
+  });
+
+  it('matches a series-prefixed title', () => {
+    const c = cand({ title: 'Slough House 4: Spook Street', authors: ['Mick Herron'] });
+    expect(mismatchReason(c, { title: 'Spook Street', author: 'Mick Herron' })).toBeNull();
+  });
+
+  it('matches a title with a trailing series parenthetical', () => {
+    const c = cand({ title: 'London Rules (Slough House 5)', authors: ['Herron, Mick'] });
+    expect(mismatchReason(c, { title: 'London Rules', author: 'Mick Herron' })).toBeNull();
+  });
+
+  it('rejects an author mismatch', () => {
+    const c = cand({ title: 'Slow Horses', authors: ['Someone Else'] });
+    expect(mismatchReason(c, req)).toMatch(/author/);
+  });
+
+  it('passes on title alone when the candidate has no author data', () => {
+    expect(mismatchReason(cand({ title: 'Slow Horses', authors: [] }), req)).toBeNull();
   });
 });
