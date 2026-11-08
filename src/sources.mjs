@@ -5,23 +5,96 @@
 // plugin's keyless users. Each fetch returns an array of raw candidate
 // records {t,a,year,isbn,pages,subjects,firstSentence,source}.
 import { getJson } from './http.mjs';
-import { pickIsbn13, pickEnglishIsbn13, primaryAuthor, cleanTitle, displayTitle, threeLetterLanguage } from './util.mjs';
+import {
+  pickIsbn13,
+  pickEnglishIsbn13,
+  primaryAuthor,
+  cleanTitle,
+  displayTitle,
+  threeLetterLanguage,
+  looksNonEnglish,
+} from './util.mjs';
 
 const OL = 'https://openlibrary.org/search.json';
 // Open Library's search index routinely takes upwards of 15 seconds to answer
 // a sorted author or subject query, so searches get a longer ceiling than the
 // default single-record lookups do.
 const SEARCH_TIMEOUT_MS = 45000;
+// `editions.*` returns the edition Open Library matched inside each work doc.
+// Its `docs` list comes back empty unless `key` is requested alongside it.
 const OL_FIELDS =
-  'title,author_name,first_publish_year,isbn,number_of_pages_median,subject,first_sentence,ratings_count,ratings_average,edition_count,want_to_read_count,language';
+  'key,title,author_name,first_publish_year,isbn,number_of_pages_median,subject,first_sentence,ratings_count,ratings_average,edition_count,want_to_read_count,language,editions,editions.title,editions.language,editions.isbn';
 
-export function fromOpenLibrary(doc, source) {
+/** The edition Open Library matched inside a work doc, when it is an English one. */
+const englishEdition = (doc) => {
+  const edition = doc.editions?.docs?.[0];
+  if (!edition?.title || !Array.isArray(edition.language) || !edition.language.includes('eng')) return undefined;
+  return edition;
+};
+
+/** A name with accents, case and punctuation folded away, for comparing catalog spellings. */
+const foldName = (name) =>
+  name
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+/**
+ * Whether a work doc from an author query is by the queried author.
+ *
+ * An author query also returns anthologies, works the author introduced, and
+ * books by other people with a similar name, so a doc counts only when its
+ * first author is the queried author. That holds when the first author's name
+ * folds to the queried name, or when the doc has a single author whose
+ * alternative names include the queried name ("Fiódor Dostoievski" lists
+ * "Fyodor Dostoevsky"). The second test also requires the two surnames to
+ * start with the same four letters, because catalog alternative names contain
+ * errors: Robert Bloch's list includes "Jim Kjelgaard".
+ */
+export function isByQueriedAuthor(doc, queriedAuthor) {
+  const names = doc.author_name;
+  const queried = foldName(queriedAuthor);
+  const first = foldName(names[0]);
+  if (first === queried) return true;
+  if (names.length !== 1 || !Array.isArray(doc.author_alternative_name)) return false;
+  const surnamePrefix = (folded) => folded.split(' ').pop().slice(0, 4);
+  return (
+    surnamePrefix(first) === surnamePrefix(queried) &&
+    doc.author_alternative_name.some((alt) => foldName(alt) === queried)
+  );
+}
+
+/**
+ * Maps an Open Library work doc onto the shared candidate shape.
+ *
+ * A work's `title` is the title in the book's original language, so a
+ * translated novel arrives as "Flickan som lekte med elden", and its `isbn`
+ * list mixes every translation's ISBNs together. The English edition matched
+ * inside the doc gives the title and ISBN an English reader knows the book
+ * by. Its title is carried as `editionTitle` so the read-shelf check can match
+ * on either name. It replaces the work title only when the work title looks
+ * non-English and the edition is English alone: an English original's work
+ * title is the better name, and its matched edition can be a study guide or a
+ * mislabelled translation.
+ *
+ * `queriedAuthor` is the read-shelf author an author query asked for. A doc by
+ * that author takes the shelf's spelling as its author, so the read-shelf
+ * check and pool dedup see one name for the author however the catalog spells
+ * it. Any other doc keeps the catalog's first author.
+ */
+export function fromOpenLibrary(doc, source, queriedAuthor) {
   if (!doc?.title || !Array.isArray(doc.author_name) || !doc.author_name.length) return null;
+  const edition = englishEdition(doc);
+  const editionTitle = edition ? displayTitle(edition.title) : undefined;
+  const useEditionTitle = Boolean(edition) && edition.language.length === 1 && looksNonEnglish(doc.title);
   return {
-    t: displayTitle(doc.title),
-    a: doc.author_name[0].trim(),
+    t: useEditionTitle ? editionTitle : displayTitle(doc.title),
+    editionTitle,
+    a: queriedAuthor && isByQueriedAuthor(doc, queriedAuthor) ? queriedAuthor : doc.author_name[0].trim(),
     year: typeof doc.first_publish_year === 'number' ? doc.first_publish_year : undefined,
-    isbn: pickIsbn13(doc.isbn),
+    isbn: pickIsbn13(edition?.isbn) || pickIsbn13(doc.isbn),
     pages: typeof doc.number_of_pages_median === 'number' ? doc.number_of_pages_median : undefined,
     subjects: Array.isArray(doc.subject) ? doc.subject.slice(0, 8) : [],
     firstSentence: Array.isArray(doc.first_sentence) ? doc.first_sentence[0] : doc.first_sentence,
@@ -36,15 +109,19 @@ export function fromOpenLibrary(doc, source) {
 
 /** More books by an author the reader already reads ("familiar" signal). */
 export async function byAuthor(author, perQuery) {
+  const queriedAuthor = primaryAuthor(author);
   const params = new URLSearchParams({
-    author: primaryAuthor(author),
-    fields: OL_FIELDS,
+    author: queriedAuthor,
+    fields: `${OL_FIELDS},author_alternative_name`, // read by isByQueriedAuthor
     language: 'eng',
+    lang: 'en', // match an English edition inside each work doc
     sort: 'editions',
     limit: String(perQuery),
   });
   const data = await getJson(`${OL}?${params}`, { retries: 2, timeoutMs: SEARCH_TIMEOUT_MS });
-  return (data?.docs || []).map((d) => fromOpenLibrary(d, `openlibrary:author:${primaryAuthor(author)}`)).filter(Boolean);
+  return (data?.docs || [])
+    .map((d) => fromOpenLibrary(d, `openlibrary:author:${queriedAuthor}`, queriedAuthor))
+    .filter(Boolean);
 }
 
 /** Top-rated books in a subject the reader gravitates to ("discovery" signal). */
@@ -53,6 +130,7 @@ export async function bySubject(subject, perQuery) {
     q: `subject:"${subject}"`,
     fields: OL_FIELDS,
     language: 'eng',
+    lang: 'en', // match an English edition inside each work doc
     sort: 'rating',
     limit: String(perQuery),
   });

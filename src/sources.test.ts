@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 // @ts-expect-error — .mjs sibling has no type declarations
-import { lookupBook, fromOpenLibrary, googleBySubject, fromGoogleBooks } from './sources.mjs';
+import { lookupBook, fromOpenLibrary, isByQueriedAuthor, googleBySubject, fromGoogleBooks } from './sources.mjs';
 
 /** A Response-shaped stub carrying only what getJson reads. */
 function reply(body: unknown) {
@@ -101,6 +101,137 @@ describe('fromOpenLibrary', () => {
     expect(cand.ratingsCount).toBeUndefined();
     expect(cand.editionCount).toBeUndefined();
     expect(cand.wantToReadCount).toBeUndefined();
+  });
+
+  it('carries the English edition title and ISBN of a work indexed under its original-language title', () => {
+    // Shaped like Open Library's real work doc for "The Girl Who Played with
+    // Fire": the work title is Swedish and the aggregated isbn list leads with
+    // a Polish edition, while the matched English edition carries both the
+    // English title and the English ISBN.
+    const cand = fromOpenLibrary(
+      {
+        title: 'Flickan som lekte med elden',
+        author_name: ['Stieg Larsson'],
+        isbn: ['8375540900', '9788375540901', '9780307476159'],
+        language: ['jpn', 'swe', 'eng'],
+        editions: {
+          docs: [{ title: 'The Girl Who Played with Fire', language: ['eng'], isbn: ['9780307476159', '0307476154'] }],
+        },
+      },
+      'openlibrary:author:Stieg Larsson',
+    );
+
+    expect(cand.editionTitle).toBe('The Girl Who Played with Fire');
+    expect(cand.isbn).toBe('9780307476159');
+    // An ASCII-only foreign title does not look non-English, so it stays.
+    expect(cand.t).toBe('Flickan som lekte med elden');
+  });
+
+  it('shows the English edition title when the work title carries non-English letters', () => {
+    const cand = fromOpenLibrary(
+      {
+        title: 'El amante japonés',
+        author_name: ['Isabel Allende'],
+        editions: { docs: [{ title: 'The Japanese lover', language: ['eng'], isbn: ['9781501116971'] }] },
+      },
+      'openlibrary:subject:Family Saga',
+    );
+
+    expect(cand.t).toBe('The Japanese lover');
+    expect(cand.isbn).toBe('9781501116971');
+  });
+
+  it("keeps an English original's work title when the matched edition is named differently", () => {
+    // Open Library matches a Spanish translation tagged as English to
+    // "Anathem"; the work title is the name the reader knows.
+    const cand = fromOpenLibrary(
+      {
+        title: 'Anathem',
+        author_name: ['Neal Stephenson'],
+        editions: { docs: [{ title: 'Anatema', language: ['eng'] }] },
+      },
+      'openlibrary:author:Neal Stephenson',
+    );
+
+    expect(cand.t).toBe('Anathem');
+    expect(cand.editionTitle).toBe('Anatema');
+  });
+
+  it('ignores a matched edition that is not in English', () => {
+    const cand = fromOpenLibrary(
+      {
+        title: 'Krew elfów',
+        author_name: ['Andrzej Sapkowski'],
+        isbn: ['9788375780635'],
+        editions: { docs: [{ title: 'Krew elfów', language: ['pol'], isbn: ['9788375780635'] }] },
+      },
+      'openlibrary:author:Andrzej Sapkowski',
+    );
+
+    expect(cand.t).toBe('Krew elfów');
+    expect(cand.editionTitle).toBeUndefined();
+  });
+
+  describe('author of a doc from an author query', () => {
+    const karamazov = {
+      title: 'Братья Карамазовы',
+      author_name: ['Fiódor Dostoievski'],
+      author_alternative_name: ['Fédor Dostoievski', 'Fyodor Dostoevsky', 'F. M. Dostoevsky'],
+    };
+
+    it("takes the read shelf's spelling when the catalog spells the queried author differently", () => {
+      const cand = fromOpenLibrary(karamazov, 'openlibrary:author:Fyodor Dostoevsky', 'Fyodor Dostoevsky');
+      expect(cand.a).toBe('Fyodor Dostoevsky');
+    });
+
+    it("keeps the catalog's author when no author was queried", () => {
+      const cand = fromOpenLibrary(karamazov, 'openlibrary:subject:Russian');
+      expect(cand.a).toBe('Fiódor Dostoievski');
+    });
+
+    it('keeps the first author of a work the queried author only contributed to', () => {
+      const cand = fromOpenLibrary(
+        {
+          title: 'A Memory of Light',
+          author_name: ['Robert Jordan', 'Brandon Sanderson'],
+          author_alternative_name: ['Brandon Sanderson'],
+        },
+        'openlibrary:author:Brandon Sanderson',
+        'Brandon Sanderson',
+      );
+      expect(cand.a).toBe('Robert Jordan');
+    });
+
+    it('keeps the catalog author when an alternative name matches but the surname does not', () => {
+      // Open Library's record for Robert Bloch lists "Jim Kjelgaard" among his
+      // alternative names.
+      const cand = fromOpenLibrary(
+        { title: 'Psycho', author_name: ['Robert Bloch'], author_alternative_name: ['Jim Kjelgaard', 'Robert A. Bloch'] },
+        'openlibrary:author:Jim Kjelgaard',
+        'Jim Kjelgaard',
+      );
+      expect(cand.a).toBe('Robert Bloch');
+    });
+
+    it('keeps the catalog author when the queried name is not among the alternative names', () => {
+      const cand = fromOpenLibrary(
+        { title: "I'm OK, you're OK", author_name: ['Thomas Anthony Harris'], author_alternative_name: ['Thomas A. Harris'] },
+        'openlibrary:author:Thomas Harris',
+        'Thomas Harris',
+      );
+      expect(cand.a).toBe('Thomas Anthony Harris');
+    });
+  });
+});
+
+describe('isByQueriedAuthor', () => {
+  it('matches a first author whose name differs from the queried name only in accents and case', () => {
+    expect(isByQueriedAuthor({ author_name: ['ÅSA LARSSON'] }, 'Åsa Larsson')).toBe(true);
+    expect(isByQueriedAuthor({ author_name: ['Asa Larsson'] }, 'Åsa Larsson')).toBe(true);
+  });
+
+  it('rejects a single-author doc that has no alternative names and a different name', () => {
+    expect(isByQueriedAuthor({ author_name: ['Dennis E. Taylor'] }, 'Dennis Taylor')).toBe(false);
   });
 });
 
