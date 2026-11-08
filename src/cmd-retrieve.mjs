@@ -39,6 +39,12 @@ const MIN_BYTES = 50 * 1024; // 50 KB
 const SOURCES = { zlib };
 
 export async function run(opts /*, command */) {
+  // ─── batch mode: one single-book retrieve per line ─────────────────────
+  if (opts.batch != null) {
+    await runBatchMode(opts);
+    return;
+  }
+
   // ─── 1. validate input ──────────────────────────────────────────────────
   const sourceName = (opts.source || 'zlib').toLowerCase();
   const source = SOURCES[sourceName];
@@ -263,6 +269,38 @@ function handleSourceError(err) {
     fail(code, message, extra);
   }
   throw err;
+}
+
+// ─── batch mode ───────────────────────────────────────────────────────────
+
+/**
+ * The flags that name a single book. `--batch` names many, so it cannot be
+ * combined with any of them. Returns the conflicting flag names.
+ */
+export function batchConflicts(opts) {
+  const named = { isbn: '--isbn', title: '--title', sourceId: '--source-id' };
+  return Object.keys(named)
+    .filter((k) => opts[k] != null && opts[k] !== '')
+    .map((k) => named[k]);
+}
+
+async function runBatchMode(opts) {
+  const conflicts = batchConflicts(opts);
+  if (conflicts.length) {
+    fail(EXIT.USAGE, `--batch cannot be combined with ${conflicts.join(', ')}`);
+  }
+  const { parseBatch, runBatch, readBatchSource, spawnRetrieveOne } = await import('./retrieve/batch.mjs');
+  let text;
+  try {
+    text = await readBatchSource(opts.batch);
+  } catch (err) {
+    fail(EXIT.USAGE, `cannot read --batch ${opts.batch}: ${err.message}`);
+  }
+  const entries = parseBatch(text);
+  if (!entries.length) fail(EXIT.USAGE, '--batch input has no book lines');
+  const { output, exitCode } = await runBatch(entries, opts, spawnRetrieveOne, log);
+  emit(output, opts);
+  process.exitCode = exitCode;
 }
 
 // ─── source-id bypass ─────────────────────────────────────────────────────

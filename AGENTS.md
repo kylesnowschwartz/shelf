@@ -95,7 +95,16 @@ npm run shelf -- retrieve --isbn <isbn> --json
 npm run shelf -- retrieve --title "..." --author "..." --ext azw3,epub --english --json
 npm run shelf -- retrieve --isbn <isbn> --dry-run --json     # rank without downloading
 npm run shelf -- retrieve --source-id zlib:r9bkkbjyzB --json # exact pick (skip search+rank)
+npm run shelf -- retrieve --batch series.txt --ext azw3 --json  # one book per line; `-` reads stdin
 ```
+
+`--batch` runs the single-book retrieve once per line, one at a time, with the shared
+flags (`--ext`, `--english`, `--max-mb`, `--dest`, `--dry-run`) applied to each. A line is
+an ISBN (trailing text is a label, e.g. `9781569476437 Slow Horses`) or `Title | Author`;
+blank lines and `#` comments are skipped. One failure does not stop the rest. Output is
+`{results:[{input, status, picked, destination, error}], summary:{delivered, failed}}` with
+`status` one of `delivered | dry-run | no-match | error`. Exit `0` if any book succeeded,
+else the first failure's code. `--batch` with `--isbn`/`--title`/`--source-id` exits `2`.
 
 Search runs through a headless Go binary (fast, JSON). Download runs through a
 **persistent Playwright Chromium session** named `zlib` (the only thing z-lib's

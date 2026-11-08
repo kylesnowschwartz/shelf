@@ -163,7 +163,17 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
    - Name the edition you got (`picked.format`, year) in one line — *which* copy and why.
    - If `omitted[]` is non-empty (a copy dropped by `--ext`/`--max-mb`/`--english`),
      offer it back: *"Skipped a 60 MB scan; want it instead?"*
-5. **Never name the backend.** Say "your copy", "the source", "the best edition",
+5. **Several books (e.g. a series) → one batch run**, not a shell loop. Write one book per
+   line — an ISBN (text after it is a label) or `Title | Author`; `#` lines are comments —
+   and pass the file (or `-` for stdin):
+   ```bash
+   printf '9781569476437 Slow Horses\nDead Lions | Mick Herron\n' \
+     | shelf retrieve --batch - --ext azw3 --json
+   ```
+   Books run one at a time with the same flags; one failure doesn't stop the rest. Read
+   `results[]` (`status`: `delivered` / `dry-run` / `no-match` / `error`) and
+   `summary.delivered` / `summary.failed`, and report each miss by its `input` line.
+6. **Never name the backend.** Say "your copy", "the source", "the best edition",
    "delivered to your Kindle" — never the library/site/binary it came from.
 
 ### Auth lifecycle (two independent sessions, binary-first)

@@ -118,6 +118,7 @@ program
   .option('--dry-run', 'search + rank only; print candidates without downloading or delivering')
   .option('--source <name>', 'backend source name (forward-compat; currently zlib only)', 'zlib')
   .option('--source-id <id>', 'explicit candidate id (e.g. zlib:19179031); bypasses search + rank — use when --dry-run shows the heuristic picked wrong')
+  .option('--batch <file>', 'retrieve one book per line of <file> (`-` = stdin): an ISBN (trailing text is a label) or "Title | Author"; runs sequentially')
   .addHelpText('after', '\nExamples:\n  $ shelf retrieve --isbn 9780441172719\n  $ shelf retrieve --title "Dune" --author "Frank Herbert" --ext epub,azw3\n  $ shelf retrieve --isbn 9780441172719 --dry-run --json\n  $ shelf retrieve --source-id zlib:19179031 --title "Hatchet"')
   .action(lazy('./src/cmd-retrieve.mjs', 'run'));
 
