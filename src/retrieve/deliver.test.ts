@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { decideDestination, safeFilename, extractFormat, deliver } from './deliver.mjs';
+import { decideDestination, safeFilename, cleanTitle, extractFormat, deliver } from './deliver.mjs';
 
 let tmpRoot: string;
 
@@ -82,6 +82,50 @@ describe('safeFilename', () => {
   it('lowercases and strips dots from format', () => {
     expect(safeFilename({ title: 'x', format: 'AZW3' })).toBe('x.azw3');
     expect(safeFilename({ title: 'x', format: '.epub' })).toBe('x.epub');
+  });
+});
+
+describe('cleanTitle', () => {
+  it('strips a leading "<Series> N:" prefix', () => {
+    expect(cleanTitle('Slough House 4: Spook Street')).toBe('Spook Street');
+    expect(cleanTitle('Slough House 9: Clown Town')).toBe('Clown Town');
+    expect(cleanTitle('Slough House #4: Spook Street')).toBe('Spook Street');
+    expect(cleanTitle('Slough House, Book 4: Spook Street')).toBe('Spook Street');
+  });
+  it('strips a trailing "(<Series> N)" suffix', () => {
+    expect(cleanTitle('London Rules (Slough House 5)')).toBe('London Rules');
+    expect(cleanTitle('London Rules (Slough House, #5)')).toBe('London Rules');
+    expect(cleanTitle('Spook Street (Slough House 4.5)')).toBe('Spook Street');
+  });
+  it('leaves titles without series text unchanged', () => {
+    expect(cleanTitle('The Way of Kings')).toBe('The Way of Kings');
+    expect(cleanTitle('Slow Horses')).toBe('Slow Horses');
+  });
+  it('keeps a colon that belongs to the real title', () => {
+    expect(cleanTitle('Standing by the Wall: The Collected Slough House Novellas')).toBe(
+      'Standing by the Wall: The Collected Slough House Novellas',
+    );
+    expect(cleanTitle('1984: A Novel')).toBe('1984: A Novel');
+    expect(cleanTitle('Fahrenheit 451: A Novel')).toBe('Fahrenheit 451: A Novel');
+    expect(cleanTitle('Dune: Messiah')).toBe('Dune: Messiah');
+  });
+  it('keeps a parenthetical that is not "<Series> N"', () => {
+    expect(cleanTitle('Dune (2)')).toBe('Dune (2)');
+    expect(cleanTitle('Dune (Deluxe Edition)')).toBe('Dune (Deluxe Edition)');
+  });
+  it('returns the original when stripping would leave nothing', () => {
+    expect(cleanTitle('Slough House 4:')).toBe('Slough House 4:');
+  });
+});
+
+describe('safeFilename with series titles', () => {
+  it('names the file from the cleaned title', () => {
+    expect(safeFilename({ title: 'Slough House 4: Spook Street', format: 'azw3' })).toBe('spook-street.azw3');
+    expect(safeFilename({ title: 'London Rules (Slough House 5)', format: 'azw3' })).toBe('london-rules.azw3');
+    expect(safeFilename({ title: 'Slough House 9: Clown Town', format: 'azw3' })).toBe('clown-town.azw3');
+    expect(
+      safeFilename({ title: 'Standing by the Wall: The Collected Slough House Novellas', format: 'azw3' }),
+    ).toBe('standing-by-the-wall-the-collected-slough-house-novellas.azw3');
   });
 });
 
