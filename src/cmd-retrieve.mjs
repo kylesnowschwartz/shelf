@@ -109,7 +109,7 @@ export async function run(opts /*, command */) {
 
   if (opts.dryRun) {
     log('dry run: not downloading');
-    emit({ picked, alternatives, omitted, dryRun: true }, opts);
+    emit({ ...compactCandidates(ranked), omitted, dryRun: true }, opts);
     return;
   }
 
@@ -235,6 +235,66 @@ export function rankIndexedCandidates(a, b) {
   const qb = qualityScore(b.c);
   if (qa !== qb) return qb - qa;
   return a.i - b.i;
+}
+
+// Default number of alternatives shown in --dry-run output.
+const DRY_RUN_ALTERNATIVES = 8;
+
+/**
+ * Normalised title for edition grouping: lowercase, bracketed asides
+ * ("(Slough House #1)") dropped, a leading numbered series prefix
+ * ("Slough House 1 - ", "Series #2: ") dropped, punctuation stripped.
+ */
+export function editionTitleKey(title) {
+  return String(title || '')
+    .toLowerCase()
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
+    .replace(/^\p{L}[^:]*?\s#?\d+(?:\.\d+)?\s*[:\-–—.]\s+/u, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+// Words that do not distinguish one publisher family from another.
+const PUBLISHER_NOISE = new Set(['the', 'a', 'an', 'and', 'publishing', 'publishers', 'publisher', 'books', 'press', 'inc', 'ltd', 'llc', 'co', 'group', 'house', 'uk', 'us', 'usa']);
+
+/**
+ * Publisher family: the first distinguishing word of the publisher name, so
+ * "Hachette UK" and "Hachette Book Group" share the family "hachette".
+ * Telegram handles ("@x") and missing publishers map to ''.
+ */
+export function publisherFamily(publisher) {
+  const p = String(publisher || '').trim();
+  if (!p || p.startsWith('@')) return '';
+  const words = p.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w && !PUBLISHER_NOISE.has(w));
+  return words[0] || '';
+}
+
+/**
+ * Compact a ranked candidate list for --dry-run output. Candidates that are
+ * the same edition (same normalised title, publisher family, year and format)
+ * collapse into one entry: the best-ranked copy keeps its fields and gains
+ * `copies` and `otherSourceIds` (the remaining copies in rank order).
+ * The first entry is `picked`; at most `limit` further entries are
+ * `alternatives`, and `omittedCount` reports how many were cut (present only
+ * when some were).
+ *
+ * @param {any[]} ranked candidates, best first
+ * @param {{ limit?: number }} [opts]
+ * @returns {{ picked: any, alternatives: any[], omittedCount?: number }}
+ */
+export function compactCandidates(ranked, { limit = DRY_RUN_ALTERNATIVES } = {}) {
+  const groups = new Map();
+  for (const c of ranked) {
+    const key = [editionTitleKey(c.title), publisherFamily(c.publisher), c.year ?? '', String(c.format || '').toLowerCase()].join('|');
+    const group = groups.get(key);
+    if (group) group.otherSourceIds.push(c.sourceId);
+    else groups.set(key, { ...c, copies: 1, otherSourceIds: [] });
+  }
+  const entries = [...groups.values()].map((e) => ({ ...e, copies: 1 + e.otherSourceIds.length }));
+  const [picked, ...rest] = entries;
+  const result = { picked, alternatives: rest.slice(0, limit) };
+  if (rest.length > limit) result.omittedCount = rest.length - limit;
+  return result;
 }
 
 /**
