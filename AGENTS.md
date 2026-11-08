@@ -92,7 +92,7 @@ npm run shelf -- profile --json   # genre mix (calibration target), repeat autho
 
 ```bash
 npm run shelf -- retrieve --isbn <isbn> --json
-npm run shelf -- retrieve --title "..." --author "..." --ext azw3,epub --english --json
+npm run shelf -- retrieve --title "..." --author "..." --ext azw3,mobi --english --json
 npm run shelf -- retrieve --isbn <isbn> --dry-run --json     # rank without downloading
 npm run shelf -- retrieve --source-id zlib:r9bkkbjyzB --json # exact pick (skip search+rank)
 ```
@@ -108,6 +108,11 @@ Delivery destination (set by `retrieve/deliver.mjs`):
 - `/Volumes/Kindle/documents/` when the Kindle is mounted (`kind: "kindle"`)
 - `~/Downloads/` otherwise (`kind: "downloads"`)
 - `<dir>` when `--dest <dir>` is given (`kind: "override"`)
+
+Kindle delivery never carries an EPUB (the Kindle does not display sideloaded EPUBs):
+with the Kindle mounted and no `--dest`, `--ext` defaults to `azw3,mobi`, and an EPUB
+(explicit `--ext epub`, or a `--source-id` download that turns out to be EPUB) exits 2
+with a message to use `--dest`.
 
 Filename is slugified safe text + format extension (e.g. `brian-robeson-01-hatchet.azw3`).
 Each result carries `picked`, `destination`, `mounted`, `kind`, `format`, `sizeBytes`,

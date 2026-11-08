@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { log, emit, fail, EXIT } from './output.mjs';
 import * as zlib from './retrieve/sources/zlib.mjs';
-import { deliver } from './retrieve/deliver.mjs';
+import { deliver, decideDestination } from './retrieve/deliver.mjs';
 
 // Format preference order. AZW3 is Amazon's native format and renders
 // reliably on every Kindle, so it leads; modern Kindles read EPUB natively
@@ -62,7 +62,9 @@ export async function run(opts /*, command */) {
     fail(EXIT.USAGE, 'retrieve requires either --isbn or both --title and --author (or --source-id for a direct fetch)');
   }
 
-  const extensions = parseList(opts.ext);
+  const formats = resolveFormats({ ext: opts.ext, dest: opts.dest });
+  if (formats.error) fail(EXIT.USAGE, formats.error);
+  const extensions = formats.extensions;
   const maxBytes = parseMaxMb(opts.maxMb);
 
   // ─── 2. search ──────────────────────────────────────────────────────────
@@ -126,12 +128,14 @@ export async function run(opts /*, command */) {
   }
 
   // ─── 6. deliver ─────────────────────────────────────────────────────────
+  const deliverFormat = picked.format || downloaded.format || 'epub';
+  await refuseEpubOnKindle(deliverFormat, opts.dest, stagingDir);
   let delivered;
   try {
     delivered = await deliver({
       sourcePath: downloaded.path,
       title: picked.title || title || isbn || 'book',
-      format: picked.format || downloaded.format || 'epub',
+      format: deliverFormat,
       dest: opts.dest,
     });
   } finally {
@@ -163,6 +167,53 @@ function parseList(s) {
     .split(',')
     .map((x) => x.trim().toLowerCase())
     .filter(Boolean);
+}
+
+// Kyle's Kindle does not display sideloaded EPUBs, so Kindle delivery is
+// restricted to Amazon formats (AZW3 preferred via FORMAT_RANK, then MOBI).
+const KINDLE_DEFAULT_EXTENSIONS = ['azw3', 'mobi'];
+const KINDLE_EPUB_REFUSAL =
+  'EPUB files do not display on the Kindle; pass --dest <dir> to save the EPUB elsewhere, ' +
+  'eject the Kindle to deliver to ~/Downloads, or choose --ext azw3,mobi';
+
+/**
+ * Resolve the format filter for this run. When delivery is headed to a
+ * mounted Kindle (same detection as deliver.mjs) and --ext is absent, the
+ * filter defaults to azw3,mobi. An explicit --ext that includes epub is
+ * refused for Kindle delivery. With --dest set or no Kindle mounted, --ext
+ * passes through unchanged (empty = every format).
+ *
+ * @param {{ ext?: string, dest?: string, env?: Record<string, string|undefined>, mountDefault?: string }} [opts]
+ * @returns {{ extensions: string[], kindle: boolean, error?: string }}
+ */
+export function resolveFormats({ ext, dest, env, mountDefault } = {}) {
+  const extensions = parseList(ext);
+  const kindle = decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
+  if (!kindle) return { extensions, kindle };
+  if (!extensions.length) return { extensions: [...KINDLE_DEFAULT_EXTENSIONS], kindle };
+  if (extensions.includes('epub')) return { extensions, kindle, error: KINDLE_EPUB_REFUSAL };
+  return { extensions, kindle };
+}
+
+/**
+ * Error message when a file of `format` would land on the Kindle as an EPUB,
+ * else null. Covers paths where the format is only known after download
+ * (--source-id, or a candidate whose format the search left blank).
+ *
+ * @param {{ format?: string, dest?: string, env?: Record<string, string|undefined>, mountDefault?: string }} opts
+ * @returns {string|null}
+ */
+export function kindleEpubError({ format, dest, env, mountDefault } = {}) {
+  if (String(format || '').toLowerCase() !== 'epub') return null;
+  const kindle = decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
+  return kindle ? KINDLE_EPUB_REFUSAL : null;
+}
+
+async function refuseEpubOnKindle(format, dest, stagingDir) {
+  const error = kindleEpubError({ format, dest });
+  if (!error) return;
+  await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+  fail(EXIT.USAGE, error);
 }
 
 function parseMaxMb(s) {
@@ -286,6 +337,7 @@ async function runSourceIdBypass(source, opts) {
     await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
     handleSourceError(err);
   }
+  await refuseEpubOnKindle(downloaded.format || 'epub', opts.dest, stagingDir);
   let delivered;
   try {
     delivered = await deliver({

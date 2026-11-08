@@ -148,10 +148,13 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
    ```bash
    shelf retrieve --isbn <isbn> --json
    # or
-   shelf retrieve --title "..." --author "..." --ext azw3,epub --english --json
+   shelf retrieve --title "..." --author "..." --english --json
    ```
-   Kindles read **AZW3 / EPUB** natively; the engine already prefers those, then MOBI,
-   then PDF (poor reflow). Add `--ext azw3,epub` to be strict, `--english` to drop
+   Kyle's Kindle does not display sideloaded EPUBs. When the Kindle is mounted and
+   `--dest` is not set, the format filter defaults to `azw3,mobi` (AZW3 preferred), and an
+   EPUB bound for the Kindle is refused with a usage error (use `--dest` for an EPUB).
+   Otherwise the engine prefers AZW3, then EPUB, then MOBI, then PDF (poor reflow).
+   Add `--ext <list>` to be strict, `--english` to drop
    non-English editions, `--max-mb <n>` to skip likely OCR scans / audiobook zips.
 3. **Preview first when the pick is uncertain:** `--dry-run` searches and ranks without
    downloading, returning `picked` + `alternatives`. If the heuristic picked wrong,
