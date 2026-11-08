@@ -5,8 +5,9 @@
 // the composite quality score, and the indexed-pair ranker that fuses
 // format preference + quality + source order.
 
-import { describe, it, expect } from 'vitest';
-import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason } from './cmd-retrieve.mjs';
+import { describe, it, expect, vi } from 'vitest';
+import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason, withSourceRetry } from './cmd-retrieve.mjs';
+import { SourceError } from './retrieve/sources/zlib.mjs';
 
 const cand = (overrides = {}) => ({
   sourceId: 'zlib:x',
@@ -228,5 +229,46 @@ describe('mismatchReason', () => {
 
   it('passes on title alone when the candidate has no author data', () => {
     expect(mismatchReason(cand({ title: 'Slow Horses', authors: [] }), req)).toBeNull();
+  });
+});
+
+
+describe('withSourceRetry', () => {
+  const unavailable = () => new SourceError('SOURCE_UNAVAILABLE', 'source temporarily unavailable; retry later');
+  const noSleep = () => {
+    const waits: number[] = [];
+    return { waits, sleep: async (ms: number) => void waits.push(ms) };
+  };
+
+  it('retries SOURCE_UNAVAILABLE and returns the first success', async () => {
+    const { waits, sleep } = noSleep();
+    const call = vi.fn().mockRejectedValueOnce(unavailable()).mockResolvedValueOnce({ candidates: [] });
+    await expect(withSourceRetry(call, { delaysMs: [2000, 5000], sleep })).resolves.toEqual({ candidates: [] });
+    expect(call).toHaveBeenCalledTimes(2);
+    expect(waits).toEqual([2000]);
+  });
+
+  it('gives up after the retry limit and rethrows the last error', async () => {
+    const { waits, sleep } = noSleep();
+    const last = unavailable();
+    const call = vi.fn().mockRejectedValueOnce(unavailable()).mockRejectedValueOnce(unavailable()).mockRejectedValueOnce(last);
+    await expect(withSourceRetry(call, { delaysMs: [2000, 5000], sleep })).rejects.toBe(last);
+    expect(call).toHaveBeenCalledTimes(3);
+    expect(waits).toEqual([2000, 5000]);
+  });
+
+  it('does not retry an auth error', async () => {
+    const { waits, sleep } = noSleep();
+    const call = vi.fn().mockRejectedValue(new SourceError('SOURCE_AUTH_REQUIRED', 'login needed'));
+    await expect(withSourceRetry(call, { sleep })).rejects.toMatchObject({ code: 'SOURCE_AUTH_REQUIRED' });
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(waits).toEqual([]);
+  });
+
+  it('does not retry a no-data error', async () => {
+    const { sleep } = noSleep();
+    const call = vi.fn().mockRejectedValue(new SourceError('SOURCE_NOT_FOUND', 'gone'));
+    await expect(withSourceRetry(call, { sleep })).rejects.toMatchObject({ code: 'SOURCE_NOT_FOUND' });
+    expect(call).toHaveBeenCalledTimes(1);
   });
 });

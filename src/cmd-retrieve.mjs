@@ -69,12 +69,14 @@ export async function run(opts /*, command */) {
   log(`source: searching${isbn ? ` by isbn ${isbn}` : ` for "${title}" by ${author}"`}`);
   let result;
   try {
-    result = await source.search({
-      isbn,
-      title,
-      author,
-      extensions: extensions.length ? extensions : undefined,
-    });
+    result = await withSourceRetry(() =>
+      source.search({
+        isbn,
+        title,
+        author,
+        extensions: extensions.length ? extensions : undefined,
+      }),
+    );
   } catch (err) {
     handleSourceError(err);
   }
@@ -135,7 +137,7 @@ export async function run(opts /*, command */) {
   let downloaded;
   try {
     log(`source: downloading ${picked.sourceId}`);
-    downloaded = await source.download({ sourceId: picked.sourceId, destDir: stagingDir });
+    downloaded = await withSourceRetry(() => source.download({ sourceId: picked.sourceId, destDir: stagingDir }));
     log(`source: downloaded via ${downloaded.transport}`);
   } catch (err) {
     await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
@@ -317,6 +319,32 @@ export function rankIndexedCandidates(a, b) {
   return a.i - b.i;
 }
 
+// Backoff before each extra attempt when the source reports a transient
+// outage. Two retries cover the observed case: a first call that fails with
+// SOURCE_UNAVAILABLE and an identical call seconds later that succeeds.
+const SOURCE_RETRY_DELAYS_MS = [2000, 5000];
+const realSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Run a source call, retrying only when it throws a SourceError with code
+ * SOURCE_UNAVAILABLE. Auth, not-found, and missing-binary errors are not
+ * transient and propagate on the first throw. After the last retry the final
+ * error propagates unchanged.
+ */
+export async function withSourceRetry(call, { delaysMs = SOURCE_RETRY_DELAYS_MS, sleep = realSleep } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (err) {
+      const transient = err && err.name === 'SourceError' && err.code === 'SOURCE_UNAVAILABLE';
+      if (!transient || attempt >= delaysMs.length) throw err;
+      const wait = delaysMs[attempt];
+      log(`source: unavailable — retrying in ${wait}ms (try ${attempt + 1}/${delaysMs.length})`);
+      await sleep(wait);
+    }
+  }
+}
+
 /**
  * Convert a SourceError into one of our documented exit codes. Identity of
  * the source backend never leaks into the user-facing error message — only
@@ -360,7 +388,7 @@ async function runSourceIdBypass(source, opts) {
   let downloaded;
   try {
     log(`source: downloading explicit ${opts.sourceId}`);
-    downloaded = await source.download({ sourceId: opts.sourceId, destDir: stagingDir });
+    downloaded = await withSourceRetry(() => source.download({ sourceId: opts.sourceId, destDir: stagingDir }));
     log(`source: downloaded via ${downloaded.transport}`);
   } catch (err) {
     await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
