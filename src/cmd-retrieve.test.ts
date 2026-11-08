@@ -6,7 +6,7 @@
 // format preference + quality + source order.
 
 import { describe, it, expect, vi } from 'vitest';
-import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason, withSourceRetry } from './cmd-retrieve.mjs';
+import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason, withSourceRetry, candidateHasIsbn, searchWithIsbnFallback } from './cmd-retrieve.mjs';
 import { SourceError } from './retrieve/sources/zlib.mjs';
 
 const cand = (overrides = {}) => ({
@@ -270,5 +270,95 @@ describe('withSourceRetry', () => {
     const call = vi.fn().mockRejectedValue(new SourceError('SOURCE_NOT_FOUND', 'gone'));
     await expect(withSourceRetry(call, { sleep })).rejects.toMatchObject({ code: 'SOURCE_NOT_FOUND' });
     expect(call).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe('candidateHasIsbn', () => {
+  it('matches across hyphens and within a comma-separated isbn list', () => {
+    expect(candidateHasIsbn(cand({ isbn: '1616952261, 978-1-61695-226-6' }), '9781616952266')).toBe(true);
+  });
+
+  it('does not match a different edition or a missing isbn', () => {
+    expect(candidateHasIsbn(cand({ isbn: '9781616952266' }), '9781616952259')).toBe(false);
+    expect(candidateHasIsbn(cand({ isbn: null }), '9781616952259')).toBe(false);
+  });
+});
+
+describe('searchWithIsbnFallback', () => {
+  /** A source stub that answers each search with `answer(query)` and records the queries. */
+  function stubSource(answer: (q: any) => any[]) {
+    const queries: any[] = [];
+    const search = async (q: any) => {
+      queries.push(q);
+      return { candidates: answer(q), page: 1, totalPages: 1 };
+    };
+    return { queries, source: { search } };
+  }
+
+  it('keeps the isbn search when a candidate carries the requested isbn', async () => {
+    const { queries, source } = stubSource(() => [cand({ isbn: '9781616952259' })]);
+    const lookup = async () => {
+      throw new Error('should not be called');
+    };
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, { lookup });
+    expect(found.matchedBy).toBe('isbn');
+    expect(queries).toHaveLength(1);
+  });
+
+  it('resolves the isbn via the lookup and searches by title when only other editions come back', async () => {
+    const ebook = cand({ sourceId: 'zlib:ebook', isbn: '9781616952266' });
+    const { queries, source } = stubSource((q) => (q.isbn ? [] : [ebook]));
+    const lookup = async (isbn: string) => {
+      expect(isbn).toBe('9781616952259');
+      return { title: 'Dead Lions', author: 'Mick Herron' };
+    };
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259', extensions: ['epub'] }, { lookup });
+    expect(found.matchedBy).toBe('title');
+    expect(found.result.candidates).toEqual([ebook]);
+    expect(queries[1]).toEqual({ title: 'Dead Lions', author: 'Mick Herron', extensions: ['epub'] });
+  });
+
+  it('falls back when the isbn search returns candidates without the requested isbn', async () => {
+    const { queries, source } = stubSource((q) => (q.isbn ? [cand({ isbn: '9780000000000' })] : [cand()]));
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
+      lookup: async () => ({ title: 'Dead Lions', author: 'Mick Herron' }),
+    });
+    expect(found.matchedBy).toBe('title');
+    expect(queries).toHaveLength(2);
+  });
+
+  it('uses the caller title and author instead of the lookup when both are given', async () => {
+    const { queries, source } = stubSource((q) => (q.isbn ? [] : [cand()]));
+    const lookup = async () => {
+      throw new Error('should not be called');
+    };
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259', title: 'Dead Lions', author: 'Mick Herron' }, { lookup });
+    expect(found.matchedBy).toBe('title');
+    expect(queries[1]).toMatchObject({ title: 'Dead Lions', author: 'Mick Herron' });
+  });
+
+  it('reports unresolved when the lookup has no record for the isbn', async () => {
+    const { queries, source } = stubSource(() => []);
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, { lookup: async () => null });
+    expect(found.unresolved).toMatch(/Open Library has no title/);
+    expect(queries).toHaveLength(1);
+  });
+
+  it('reports unresolved when the lookup fails', async () => {
+    const { source } = stubSource(() => []);
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616952259' }, {
+      lookup: async () => {
+        throw new Error('openlibrary.org 503 after 3 retries');
+      },
+    });
+    expect(found.unresolved).toMatch(/lookup for it failed \(openlibrary.org 503/);
+  });
+
+  it('searches by title with matchedBy "title" when no isbn is given', async () => {
+    const { queries, source } = stubSource(() => [cand()]);
+    const found = await searchWithIsbnFallback(source, { title: 'Dead Lions', author: 'Mick Herron' });
+    expect(found.matchedBy).toBe('title');
+    expect(queries).toEqual([{ title: 'Dead Lions', author: 'Mick Herron', extensions: undefined }]);
   });
 });

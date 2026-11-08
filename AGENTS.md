@@ -113,6 +113,12 @@ Filename is slugified safe text + format extension (e.g. `brian-robeson-01-hatch
 Each result carries `picked`, `destination`, `mounted`, `kind`, `format`, `sizeBytes`,
 `alternatives[]`, `omitted[]` (candidates a hard filter dropped — surface them back).
 
+`matchedBy` (also in `--dry-run` output) says which search found the candidates. An
+`--isbn` search that finds no candidate carrying that exact ISBN (common for a print
+ISBN when the source stocks only ebook editions) resolves the ISBN to title and author
+via Open Library and searches by those, reporting `"matchedBy": "title"`; otherwise
+`"isbn"`. If Open Library cannot resolve the ISBN, retrieve exits `3` with the reason.
+
 Retrieve exit codes (same vocabulary): `5` means the source needs authentication
 or is unavailable. If it returns `"sourceCode": "SOURCE_AUTH_REQUIRED"`, re-run:
 
