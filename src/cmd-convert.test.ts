@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtemp, writeFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findConverter, planConversion, run, CALIBRE_APP_BINARY } from './cmd-convert.mjs';
+import { findConverter, planConversion, convertFile, run, CALIBRE_APP_BINARY } from './cmd-convert.mjs';
 
 describe('findConverter', () => {
   it('prefers $EBOOK_CONVERT when it is executable', async () => {
@@ -99,5 +99,50 @@ describe('run', () => {
     const { dir, file } = await tempBook('a.mobi');
     await run({ file, dryRun: true, runner: fakeRunner, finder: { env: { EBOOK_CONVERT: '/x' }, isExec: async () => true }, json: true });
     expect(await readdir(dir)).toEqual(['a.mobi']);
+  });
+});
+
+describe('convertFile', () => {
+  async function tempBook(name: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'shelf-convert-'));
+    const file = join(dir, name);
+    await writeFile(file, 'book');
+    return { dir, file };
+  }
+
+  it('converts with the given converter and reports the output and its size', async () => {
+    const { dir, file } = await tempBook('a.epub');
+    const calls: string[][] = [];
+    const r = await convertFile({
+      input: file,
+      converter: '/x/ebook-convert',
+      runner: async (bin: string, args: string[]) => {
+        calls.push([bin, ...args]);
+        await writeFile(args[1], 'converted');
+      },
+    });
+    expect(r).toMatchObject({ converted: true, output: join(dir, 'a.azw3'), sizeBytes: 'converted'.length, inputFormat: 'epub' });
+    expect(calls).toEqual([['/x/ebook-convert', file, join(dir, 'a.azw3')]]);
+  });
+
+  it('throws a usage error when ebook-convert is missing', async () => {
+    const { file } = await tempBook('a.epub');
+    await expect(convertFile({ input: file, finder: { env: { PATH: '/a' }, isExec: async () => false } })).rejects.toMatchObject({
+      code: 'CONVERTER_MISSING',
+      exitCode: 2,
+      message: expect.stringMatching(/ebook-convert not found/),
+    });
+  });
+
+  it('throws when ebook-convert fails', async () => {
+    const { file } = await tempBook('a.mobi');
+    const runner = async () => {
+      throw new Error('ebook-convert exited with code 1: bad input');
+    };
+    await expect(convertFile({ input: file, converter: '/x', runner })).rejects.toMatchObject({
+      code: 'CONVERT_FAILED',
+      exitCode: 5,
+      message: expect.stringMatching(/conversion failed: .*bad input/),
+    });
   });
 });

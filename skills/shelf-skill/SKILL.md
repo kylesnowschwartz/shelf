@@ -154,13 +154,18 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
    ```
 
    Kyle's Kindle shows only **AZW3** files copied over USB; sideloaded EPUBs do not appear.
-   MOBI files do not appear either. When the Kindle is mounted and `--dest` is not set, the
-   format filter defaults to `azw3`, and an EPUB or MOBI bound for the Kindle is refused
-   with a usage error. If no AZW3 exists, retrieve the best EPUB or MOBI with `--dest <dir>`, then run
-   `shelf convert <file> --replace` to make an AZW3 (needs Calibre) and copy it to
-   `/Volumes/Kindle/documents/`. Otherwise the engine prefers AZW3, then EPUB, then MOBI,
-   then PDF (poor reflow). Add `--ext <list>` to be strict, `--english` to drop
-   non-English editions, `--max-mb <n>` to skip likely OCR scans / audiobook zips.
+   MOBI files do not appear either. When the Kindle is mounted and neither `--dest` nor
+   `--ext` is set, retrieve looks for an AZW3 first; if none exists, it downloads the best
+   EPUB (or MOBI when there is no EPUB), converts it to AZW3 with Calibre, and delivers only
+   the AZW3. The JSON then says `"convertedFrom": "epub"` (or `"mobi"`) — tell Kyle it was
+   converted. If Calibre is missing, retrieve exits `2` with an install hint before
+   downloading anything; if the conversion fails, it exits `5`. Nothing is delivered in
+   either case. Do not pass `--ext azw3` for the Kindle: an explicit `--ext` turns the
+   conversion off. To convert by hand instead, retrieve with `--dest <dir>`, run
+   `shelf convert <file> --replace`, and copy the AZW3 to `/Volumes/Kindle/documents/`.
+   Without the Kindle, the engine prefers AZW3, then EPUB, then MOBI, then PDF (poor
+   reflow). Add `--ext <list>` to be strict, `--english` to drop non-English editions,
+   `--max-mb <n>` to skip likely OCR scans / audiobook zips.
 3. **Preview first when the pick is uncertain:** `--dry-run` searches and ranks without
    downloading, returning `picked` + `alternatives`. If the heuristic picked wrong,
    re-run with `--source-id <id>` (from the dry-run output) to fetch that exact edition.
@@ -177,7 +182,7 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
 
    ```bash
    printf '9781569476437 Slow Horses\nDead Lions | Mick Herron\n' \
-     | shelf retrieve --batch - --ext azw3 --json
+     | shelf retrieve --batch - --json
    ```
 
    Books run one at a time with the same flags; one failure doesn't stop the rest. Read

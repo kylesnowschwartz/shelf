@@ -95,7 +95,7 @@ npm run shelf -- retrieve --isbn <isbn> --json
 npm run shelf -- retrieve --title "..." --author "..." --ext azw3 --english --json
 npm run shelf -- retrieve --isbn <isbn> --dry-run --json     # rank without downloading
 npm run shelf -- retrieve --source-id zlib:r9bkkbjyzB --json # exact pick (skip search+rank)
-npm run shelf -- retrieve --batch series.txt --ext azw3 --json  # one book per line; `-` reads stdin
+npm run shelf -- retrieve --batch series.txt --json  # one book per line; `-` reads stdin
 ```
 
 `--batch` runs the single-book retrieve once per line, one at a time, with the shared
@@ -118,11 +118,17 @@ Delivery destination (set by `retrieve/deliver.mjs`):
 - `~/Downloads/` otherwise (`kind: "downloads"`)
 - `<dir>` when `--dest <dir>` is given (`kind: "override"`)
 
-Kindle delivery carries only AZW3 (the Kindle does not display sideloaded EPUB or MOBI):
-with the Kindle mounted and no `--dest`, `--ext` defaults to `azw3`, and an EPUB or MOBI
-(explicit `--ext`, or a `--source-id` download that turns out to be one) exits 2 with a
-message to use `--dest`. When no AZW3 exists, save the file with `--dest <dir>` and run
-`convert` on it.
+Kindle delivery carries only AZW3 (the Kindle does not display sideloaded EPUB or MOBI).
+With the Kindle mounted and no `--dest` or `--ext`, retrieve searches for AZW3 first. When
+no AZW3 copy passes the title check and filters, it searches again for EPUB or MOBI (same
+title check, `--english` and `--max-mb`), downloads the best one (EPUB over MOBI), converts
+it to AZW3 with Calibre's `ebook-convert`, delivers only the AZW3, and deletes the
+downloaded file. The result then carries `"convertedFrom": "epub"` or `"mobi"`; a
+`--dry-run` that would convert shows `"convertTo": "azw3"`. If Calibre is missing, retrieve
+exits `2` before downloading; if the conversion fails, it exits `5`; in both cases nothing
+is delivered. An explicit `--ext azw3` never converts, and an explicit `--ext` with EPUB or
+MOBI (or a `--source-id` download that turns out to be one) exits `2`. To convert by hand
+instead, save the file with `--dest <dir>` and run `convert` on it.
 
 Filename is the slugified title without series text ("Slough House 4: Spook Street" →
 `spook-street.azw3`) + format extension. Delivery never overwrites a file: when a
@@ -148,9 +154,10 @@ prefixes such as "Slough House 4:" are ignored; a number that is part of the tit
 `--dry-run` merges copies of the same edition into one entry (`copies`, `otherSourceIds`)
 and lists at most 8 alternatives; `omittedCount` appears when entries were cut.
 
-Converting a file (`convert`): when `retrieve` can only find MOBI or EPUB, convert it to
-AZW3 with Calibre's `ebook-convert` (must be installed; found via `$EBOOK_CONVERT`, PATH, or
-`/Applications/calibre.app`). A file already in the target format is skipped.
+Converting a file (`convert`): converts any ebook file, by default to AZW3, with Calibre's
+`ebook-convert` (must be installed; found via `$EBOOK_CONVERT`, PATH, or
+`/Applications/calibre.app`). `retrieve` uses the same conversion for Kindle delivery. A
+file already in the target format is skipped.
 
 ```bash
 npm run shelf -- convert <file> --json                 # → <file>.azw3 next to the input

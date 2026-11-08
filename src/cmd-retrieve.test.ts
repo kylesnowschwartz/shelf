@@ -514,8 +514,8 @@ describe('resolveFormats (Kindle format default)', () => {
   const kindleEnv = () => ({ SHELF_RETRIEVE_KINDLE_MOUNT: mount });
   const noKindle = { env: {}, mountDefault: missing };
 
-  it('defaults to azw3 when the Kindle is mounted and --ext is absent', () => {
-    expect(resolveFormats({ env: kindleEnv() })).toEqual({ extensions: ['azw3'], kindle: true });
+  it('defaults to azw3, converting from epub or mobi, when the Kindle is mounted and --ext is absent', () => {
+    expect(resolveFormats({ env: kindleEnv() })).toEqual({ extensions: ['azw3'], kindle: true, convertFrom: ['epub', 'mobi'] });
   });
 
   it('keeps an explicit non-EPUB --ext on the Kindle', () => {

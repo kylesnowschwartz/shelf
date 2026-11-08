@@ -2,7 +2,8 @@
 //
 // This is the orchestrator. It owns the deterministic mechanics: build the
 // query, apply hard filters, pick the best edition by format → size, download
-// into a tmp dir, hand off to deliver(). Judgment about edition quality stays
+// into a tmp dir, convert an EPUB or MOBI to AZW3 when a mounted Kindle has no
+// AZW3 copy to receive, hand off to deliver(). Judgment about edition quality stays
 // in the calling agent's prompt; the CLI gives it a sensible default pick
 // plus the full candidate list so the agent can override with --source-id
 // later if it wants to.
@@ -24,11 +25,12 @@ import { log, emit, fail, EXIT } from './output.mjs';
 import * as zlib from './retrieve/sources/zlib.mjs';
 import { deliver, decideDestination } from './retrieve/deliver.mjs';
 import { lookupIsbn, lookupIsbnGoogle } from './sources.mjs';
+import { convertFile, findConverter, CONVERTER_MISSING_MESSAGE } from './cmd-convert.mjs';
 
 // Format preference order. AZW3 is Amazon's native format and renders
 // reliably on every Kindle, so it leads. EPUB ranks next for non-Kindle
-// destinations; delivery to a mounted Kindle refuses EPUB. MOBI is the legacy
-// Amazon format. PDF is the fallback because reflow
+// destinations, and is the preferred format to convert to AZW3 for a mounted
+// Kindle. MOBI is the legacy Amazon format. PDF is the fallback because reflow
 // on a Kindle is poor. Any format not in this map gets pushed to the end.
 const FORMAT_RANK = { azw3: 0, epub: 1, mobi: 2, pdf: 3 };
 const formatRank = (f) => FORMAT_RANK[String(f || '').toLowerCase()] ?? 99;
@@ -75,8 +77,124 @@ export async function run(opts /*, command */) {
   const extensions = formats.extensions;
   const maxBytes = parseMaxMb(opts.maxMb);
 
-  // ─── 2. search ──────────────────────────────────────────────────────────
-  log(`source: searching${isbn ? ` by isbn ${isbn}` : ` for "${title}" by ${author}"`}`);
+  // ─── 2–3. search + filter ───────────────────────────────────────────────
+  const query = { isbn, title, author, maxBytes, english: !!opts.english };
+  let found = await findCandidates(source, { ...query, extensions });
+  // No AZW3 for a Kindle delivery: look for an EPUB or MOBI to convert.
+  let convert = false;
+  if (found.failure?.code === EXIT.NO_DATA && formats.convertFrom) {
+    log(`source: no AZW3 copy found; looking for ${formats.convertFrom.join(' or ')} to convert`);
+    const fallback = await findCandidates(source, { ...query, extensions: formats.convertFrom });
+    if (fallback.failure) {
+      fallback.failure.message = `no AZW3 copy, and no EPUB or MOBI to convert: ${fallback.failure.message}`;
+    } else {
+      convert = true;
+    }
+    found = fallback;
+  }
+  if (found.failure) fail(found.failure.code, found.failure.message, found.failure.extra);
+  const { ranked, matchedBy, omitted } = found;
+
+  // ─── 4. pick + dry-run early exit ───────────────────────────────────────
+  const picked = ranked[0];
+  const alternatives = ranked.slice(1);
+
+  if (opts.dryRun) {
+    log('dry run: not downloading');
+    const willConvert = convert ? { convertTo: 'azw3' } : {};
+    emit({ ...compactCandidates(ranked), matchedBy, omitted, ...willConvert, dryRun: true }, opts);
+    return;
+  }
+
+  // Check for Calibre before downloading, so a missing converter costs no download.
+  let converter;
+  if (convert) {
+    converter = await findConverter(opts.finder ?? {});
+    if (!converter) {
+      fail(
+        EXIT.USAGE,
+        `${CONVERTER_MISSING_MESSAGE} No AZW3 copy exists, so the ${picked.format || 'EPUB or MOBI'} copy must be ` +
+          'converted; nothing was downloaded or delivered.',
+      );
+    }
+  }
+
+  // ─── 5. download ────────────────────────────────────────────────────────
+  const stagingDir = await mkdtemp(join(tmpdir(), 'shelf-retrieve-'));
+  let downloaded;
+  try {
+    log(`source: downloading ${picked.sourceId}`);
+    downloaded = await withSourceRetry(() => source.download({ sourceId: picked.sourceId, destDir: stagingDir }));
+    log(`source: downloaded via ${downloaded.transport}`);
+  } catch (err) {
+    await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+    handleSourceError(err);
+  }
+
+  // ─── 6. convert (EPUB/MOBI bound for the Kindle) + deliver ──────────────
+  let sourcePath = downloaded.path;
+  let deliverFormat = picked.format || downloaded.format || 'epub';
+  let convertedFrom;
+  if (convert) {
+    const fromFormat = String(downloaded.format || picked.format || 'file').toLowerCase();
+    let conversion;
+    try {
+      log(`converting ${fromFormat} to azw3`);
+      conversion = await convertFile({ input: downloaded.path, to: 'azw3', converter, runner: opts.runner });
+    } catch (err) {
+      await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+      fail(err.exitCode ?? EXIT.NETWORK, `${err.message}. The ${fromFormat} file was not delivered.`, {
+        convertFrom: fromFormat,
+      });
+    }
+    sourcePath = conversion.output;
+    deliverFormat = 'azw3';
+    if (conversion.converted) convertedFrom = fromFormat;
+  }
+  await refuseEpubOnKindle(deliverFormat, opts.dest, stagingDir);
+  let delivered;
+  try {
+    delivered = await deliver({
+      sourcePath,
+      title: picked.title || title || isbn || 'book',
+      format: deliverFormat,
+      dest: opts.dest,
+    });
+  } finally {
+    // Removes the downloaded file, including an EPUB or MOBI that was converted.
+    await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+  }
+
+  // ─── 7. emit ────────────────────────────────────────────────────────────
+  emit(
+    {
+      picked,
+      matchedBy, // 'isbn' | 'title' — which search found the candidates
+      destination: delivered.destination,
+      mounted: delivered.mounted,
+      kind: delivered.kind, // 'kindle' | 'downloads' | 'override'
+      format: delivered.format,
+      ...(convertedFrom ? { convertedFrom } : {}), // 'epub' | 'mobi' — the downloaded format, converted to AZW3
+      sizeBytes: delivered.sizeBytes,
+      reused: delivered.reused, // true when an identical file was already at the destination
+      transport: downloaded.transport, // 'binary' | 'browser' — which path delivered
+      alternatives,
+      omitted,
+    },
+    opts,
+  );
+}
+
+/**
+ * Search the source and narrow the result to ranked candidates: the title
+ * gate, then the hard filters (`rejectReason`), then `rankIndexedCandidates`.
+ * Returns { ranked, matchedBy, omitted } with at least one ranked candidate,
+ * or { failure: { code, message, extra } } describing why none survived.
+ * A source that throws exits through `handleSourceError`.
+ */
+async function findCandidates(source, { isbn, title, author, extensions, maxBytes, english }) {
+  const formatNote = extensions.length ? ` (${extensions.join(', ')})` : '';
+  log(`source: searching${isbn ? ` by isbn ${isbn}` : ` for "${title}" by ${author}"`}${formatNote}`);
   let result;
   let matchedBy;
   // The book the title gate checks candidates against: the --title/--author
@@ -93,11 +211,15 @@ export async function run(opts /*, command */) {
     );
     if (found.unresolved) {
       if (found.lookupUnreachable) {
-        fail(EXIT.NETWORK, `source has no copy with isbn ${isbn}, and ${found.unresolved}; retry later`, {
-          sourceCode: 'ISBN_LOOKUP_UNAVAILABLE',
-        });
+        return {
+          failure: {
+            code: EXIT.NETWORK,
+            message: `source has no copy with isbn ${isbn}, and ${found.unresolved}; retry later`,
+            extra: { sourceCode: 'ISBN_LOOKUP_UNAVAILABLE' },
+          },
+        };
       }
-      fail(EXIT.NO_DATA, `source has no copy with isbn ${isbn}, and ${found.unresolved}`);
+      return { failure: { code: EXIT.NO_DATA, message: `source has no copy with isbn ${isbn}, and ${found.unresolved}` } };
     }
     ({ result, matchedBy } = found);
     if (found.requested) requested = found.requested;
@@ -106,10 +228,9 @@ export async function run(opts /*, command */) {
   }
 
   if (!result.candidates.length) {
-    fail(EXIT.NO_DATA, 'source returned no candidates for that query');
+    return { failure: { code: EXIT.NO_DATA, message: 'source returned no candidates for that query' } };
   }
 
-  // ─── 3. filter ──────────────────────────────────────────────────────────
   // Title gate first: ranking never sees a different book by the same author.
   const filtered = [];
   const omitted = [];
@@ -122,84 +243,38 @@ export async function run(opts /*, command */) {
       else matched.push(c);
     }
     if (!matched.length) {
-      fail(EXIT.NO_DATA, 'no candidate matches the requested title and author', {
-        matchCode: 'NO_MATCH',
-        requested,
-        omitted,
-      });
+      return {
+        failure: {
+          code: EXIT.NO_DATA,
+          message: 'no candidate matches the requested title and author',
+          extra: { matchCode: 'NO_MATCH', requested, omitted },
+        },
+      };
     }
   }
   for (const c of matched) {
-    const reason = rejectReason(c, { extensions, maxBytes, english: !!opts.english });
+    const reason = rejectReason(c, { extensions, maxBytes, english });
     if (reason) omitted.push({ candidate: c, reason });
     else filtered.push(c);
   }
 
   if (!filtered.length) {
     // Show the agent what got dropped so it can offer the user a way back.
-    fail(EXIT.NO_DATA, 'all candidates were filtered out — adjust --ext / --max-mb / --english', { omitted });
+    return {
+      failure: {
+        code: EXIT.NO_DATA,
+        message: 'all candidates were filtered out — adjust --ext / --max-mb / --english',
+        extra: { omitted },
+      },
+    };
   }
 
-  // ─── 4. pick + dry-run early exit ───────────────────────────────────────
   // Preserve source order as the tiebreaker (z-lib's relevance ranking
   // already does most of the work; we want to override only on strong
   // signals like format and quality, not on size).
   const indexed = filtered.map((c, i) => ({ c, i }));
   indexed.sort(rankIndexedCandidates);
-  const ranked = indexed.map((x) => x.c);
-  const picked = ranked[0];
-  const alternatives = ranked.slice(1);
-
-  if (opts.dryRun) {
-    log('dry run: not downloading');
-    emit({ ...compactCandidates(ranked), matchedBy, omitted, dryRun: true }, opts);
-    return;
-  }
-
-  // ─── 5. download ────────────────────────────────────────────────────────
-  const stagingDir = await mkdtemp(join(tmpdir(), 'shelf-retrieve-'));
-  let downloaded;
-  try {
-    log(`source: downloading ${picked.sourceId}`);
-    downloaded = await withSourceRetry(() => source.download({ sourceId: picked.sourceId, destDir: stagingDir }));
-    log(`source: downloaded via ${downloaded.transport}`);
-  } catch (err) {
-    await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
-    handleSourceError(err);
-  }
-
-  // ─── 6. deliver ─────────────────────────────────────────────────────────
-  const deliverFormat = picked.format || downloaded.format || 'epub';
-  await refuseEpubOnKindle(deliverFormat, opts.dest, stagingDir);
-  let delivered;
-  try {
-    delivered = await deliver({
-      sourcePath: downloaded.path,
-      title: picked.title || title || isbn || 'book',
-      format: deliverFormat,
-      dest: opts.dest,
-    });
-  } finally {
-    await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
-  }
-
-  // ─── 7. emit ────────────────────────────────────────────────────────────
-  emit(
-    {
-      picked,
-      matchedBy, // 'isbn' | 'title' — which search found the candidates
-      destination: delivered.destination,
-      mounted: delivered.mounted,
-      kind: delivered.kind, // 'kindle' | 'downloads' | 'override'
-      format: delivered.format,
-      sizeBytes: delivered.sizeBytes,
-      reused: delivered.reused, // true when an identical file was already at the destination
-      transport: downloaded.transport, // 'binary' | 'browser' — which path delivered
-      alternatives,
-      omitted,
-    },
-    opts,
-  );
+  return { ranked: indexed.map((x) => x.c), matchedBy, omitted };
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────
@@ -213,9 +288,10 @@ function parseList(s) {
 }
 
 // Kyle's Kindle displays only AZW3 files copied over USB; sideloaded EPUB and
-// MOBI files do not appear. Other formats are saved with --dest and converted
-// with `shelf convert`.
+// MOBI files do not appear. When no AZW3 exists, retrieve converts an EPUB or
+// MOBI (EPUB preferred, by FORMAT_RANK) to AZW3 before delivery.
 const KINDLE_DEFAULT_EXTENSIONS = ['azw3'];
+const KINDLE_CONVERTIBLE_EXTENSIONS = ['epub', 'mobi'];
 const KINDLE_UNREADABLE_FORMATS = new Set(['epub', 'mobi']);
 const KINDLE_FORMAT_REFUSAL =
   'EPUB and MOBI files do not display on the Kindle; pass --dest <dir> to save the file, ' +
@@ -224,18 +300,21 @@ const KINDLE_FORMAT_REFUSAL =
 /**
  * Resolve the format filter for this run. When delivery is headed to a
  * mounted Kindle (same detection as deliver.mjs) and --ext is absent, the
- * filter defaults to azw3. An explicit --ext that includes epub or mobi is
- * refused for Kindle delivery. With --dest set or no Kindle mounted, --ext
- * passes through unchanged (empty = every format).
+ * filter defaults to azw3, and `convertFrom` names the formats to search for
+ * and convert when no AZW3 copy exists. An explicit --ext that includes epub
+ * or mobi is refused for Kindle delivery. With --dest set or no Kindle
+ * mounted, --ext passes through unchanged (empty = every format).
  *
  * @param {{ ext?: string, dest?: string, env?: Record<string, string|undefined>, mountDefault?: string }} [opts]
- * @returns {{ extensions: string[], kindle: boolean, error?: string }}
+ * @returns {{ extensions: string[], kindle: boolean, convertFrom?: string[], error?: string }}
  */
 export function resolveFormats({ ext, dest, env, mountDefault } = {}) {
   const extensions = parseList(ext);
   const kindle = decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
   if (!kindle) return { extensions, kindle };
-  if (!extensions.length) return { extensions: [...KINDLE_DEFAULT_EXTENSIONS], kindle };
+  if (!extensions.length) {
+    return { extensions: [...KINDLE_DEFAULT_EXTENSIONS], kindle, convertFrom: [...KINDLE_CONVERTIBLE_EXTENSIONS] };
+  }
   if (extensions.some((e) => KINDLE_UNREADABLE_FORMATS.has(e))) return { extensions, kindle, error: KINDLE_FORMAT_REFUSAL };
   return { extensions, kindle };
 }

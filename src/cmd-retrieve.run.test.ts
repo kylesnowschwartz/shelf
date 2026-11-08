@@ -3,7 +3,7 @@
 // are observed by making process.exit throw.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -119,5 +119,156 @@ describe('retrieve --isbn when the source has no copy carrying the isbn', () => 
     expect(code).toBe(0);
     expect(result.matchedBy).toBe('title');
     expect(result.picked.sourceId).toBe('zlib:1');
+  });
+});
+
+describe('retrieve to a mounted Kindle when no AZW3 exists', () => {
+  const download = zlib.download as unknown as ReturnType<typeof vi.fn>;
+  let kindle: string;
+  let documents: string;
+  let downloadedPaths: string[];
+
+  const book = (sourceId: string, format: string) => ({
+    sourceId,
+    title: 'Slough House 4: Spook Street',
+    authors: ['Mick Herron'],
+    format,
+    sizeBytes: 900_000,
+    language: 'english',
+  });
+
+  beforeEach(() => {
+    kindle = join(root, 'kindle');
+    documents = join(kindle, 'documents');
+    mkdirSync(kindle);
+    vi.stubEnv('SHELF_RETRIEVE_KINDLE_MOUNT', kindle);
+    downloadedPaths = [];
+    download.mockImplementation(async ({ sourceId, destDir }: any) => {
+      const format = sourceId.endsWith('epub') ? 'epub' : sourceId.endsWith('mobi') ? 'mobi' : 'azw3';
+      const path = join(destDir, `download.${format}`);
+      writeFileSync(path, `${format} bytes`);
+      downloadedPaths.push(path);
+      return { path, format, sizeBytes: 10, name: null, transport: 'binary' };
+    });
+  });
+
+  afterEach(() => download.mockReset());
+
+  /** Search stub: the source holds `candidates`; a search's format filter is honoured. */
+  const sourceHas = (candidates: any[]) =>
+    search.mockImplementation(async (q: any) => ({
+      candidates: candidates.filter((c) => !q.extensions || q.extensions.includes(c.format)),
+      page: 1,
+      totalPages: 1,
+    }));
+
+  const finder = { env: { EBOOK_CONVERT: '/fake/ebook-convert' }, isExec: async () => true };
+  const kindleRun = (opts: Record<string, unknown> = {}) =>
+    retrieve({ title: 'Spook Street', author: 'Mick Herron', dest: undefined, finder, ...opts });
+
+  it('downloads the EPUB over the MOBI, converts it, and delivers only the AZW3', async () => {
+    sourceHas([book('zlib:mobi', 'mobi'), book('zlib:epub', 'epub')]);
+    const conversions: string[][] = [];
+    const runner = async (bin: string, args: string[]) => {
+      conversions.push([bin, ...args]);
+      writeFileSync(args[1], 'azw3 bytes');
+    };
+
+    const { code, result } = await kindleRun({ runner });
+
+    expect(code).toBe(0);
+    expect(search.mock.calls.map(([q]: any) => q.extensions)).toEqual([['azw3'], ['epub', 'mobi']]);
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(download.mock.calls[0][0].sourceId).toBe('zlib:epub');
+    expect(conversions).toHaveLength(1);
+    expect(conversions[0][0]).toBe('/fake/ebook-convert');
+    expect(conversions[0][1]).toMatch(/download\.epub$/);
+    expect(result).toMatchObject({
+      kind: 'kindle',
+      format: 'azw3',
+      convertedFrom: 'epub',
+      destination: join(documents, 'spook-street.azw3'),
+    });
+    expect(readdirSync(documents)).toEqual(['spook-street.azw3']);
+    expect(readFileSync(result.destination, 'utf8')).toBe('azw3 bytes');
+    expect(existsSync(downloadedPaths[0])).toBe(false); // temp EPUB removed
+  });
+
+  it('delivers nothing when the conversion fails', async () => {
+    sourceHas([book('zlib:epub', 'epub')]);
+    const runner = async () => {
+      throw new Error('ebook-convert exited with code 1: bad input');
+    };
+
+    const { code, error, result } = await kindleRun({ runner });
+
+    expect(code).toBe(5);
+    expect(result).toBeNull();
+    expect(error.message).toMatch(/conversion failed: .*bad input\. The epub file was not delivered\./);
+    expect(existsSync(documents) ? readdirSync(documents) : []).toEqual([]);
+    expect(existsSync(downloadedPaths[0])).toBe(false);
+  });
+
+  it('fails before downloading when Calibre is not installed', async () => {
+    sourceHas([book('zlib:epub', 'epub')]);
+    const missing = { env: { EBOOK_CONVERT: '/nowhere/ebook-convert' }, isExec: async () => false };
+
+    const { code, error } = await kindleRun({ finder: missing });
+
+    expect(code).toBe(2);
+    expect(error.message).toMatch(/ebook-convert not found.*nothing was downloaded or delivered/);
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('skips conversion when an AZW3 exists', async () => {
+    sourceHas([book('zlib:epub', 'epub'), book('zlib:azw3', 'azw3')]);
+    const runner = vi.fn();
+
+    const { code, result } = await kindleRun({ runner });
+
+    expect(code).toBe(0);
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(runner).not.toHaveBeenCalled();
+    expect(download.mock.calls[0][0].sourceId).toBe('zlib:azw3');
+    expect(result.format).toBe('azw3');
+    expect(result).not.toHaveProperty('convertedFrom');
+    expect(readdirSync(documents)).toEqual(['spook-street.azw3']);
+  });
+
+  it('keeps --max-mb on the EPUB/MOBI search', async () => {
+    sourceHas([{ ...book('zlib:epub', 'epub'), sizeBytes: 80 * 1024 * 1024 }, book('zlib:mobi', 'mobi')]);
+    const runner = async (_bin: string, args: string[]) => writeFileSync(args[1], 'azw3 bytes');
+
+    const { code, result } = await kindleRun({ runner, maxMb: '50' });
+
+    expect(code).toBe(0);
+    expect(result.picked.sourceId).toBe('zlib:mobi');
+    expect(result.convertedFrom).toBe('mobi');
+  });
+
+  it('keeps the title gate on the EPUB/MOBI search', async () => {
+    sourceHas([{ ...book('zlib:epub', 'epub'), title: 'The Secret Hours' }]);
+    const { code, error } = await kindleRun({ runner: vi.fn() });
+    expect(code).toBe(3);
+    expect(error.matchCode).toBe('NO_MATCH');
+    expect(error.message).toMatch(/^no AZW3 copy, and no EPUB or MOBI to convert/);
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('reports the planned conversion in a dry run without downloading', async () => {
+    sourceHas([book('zlib:epub', 'epub')]);
+    const { code, result } = await kindleRun({ dryRun: true });
+    expect(code).toBe(0);
+    expect(result).toMatchObject({ dryRun: true, convertTo: 'azw3' });
+    expect(result.picked.sourceId).toBe('zlib:epub');
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('does not convert when --ext azw3 is given explicitly', async () => {
+    sourceHas([book('zlib:epub', 'epub')]);
+    const { code } = await kindleRun({ ext: 'azw3' });
+    expect(code).toBe(3);
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(download).not.toHaveBeenCalled();
   });
 });

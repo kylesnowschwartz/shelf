@@ -1,8 +1,10 @@
 // `shelf convert` — turn an ebook file into another format with Calibre's
 // `ebook-convert`, which must already be installed (shelf never installs it).
 //
-// Why it exists: `retrieve` sometimes finds only MOBI or EPUB for a book, and
-// the Kindle only shows AZW3 files copied over USB. This command closes that gap.
+// Why it exists: the Kindle only shows AZW3 files copied over USB, and some
+// books exist only as MOBI or EPUB. `retrieve` calls `convertFile` itself when
+// it has to deliver one of those to the Kindle; this command converts any file
+// by hand.
 //
 // Behaviour:
 //   - Finds `ebook-convert` from $EBOOK_CONVERT, then PATH, then the macOS
@@ -66,6 +68,22 @@ export function planConversion(input, to, dest) {
   };
 }
 
+export const CONVERTER_MISSING_MESSAGE =
+  'ebook-convert not found. Install Calibre (brew install --cask calibre) or set EBOOK_CONVERT to its path.';
+
+/**
+ * A conversion that could not run. `exitCode` is the CLI exit code for it:
+ * USAGE when ebook-convert is missing, NETWORK when ebook-convert failed.
+ */
+export class ConvertError extends Error {
+  constructor(code, message, exitCode) {
+    super(message);
+    this.name = 'ConvertError';
+    this.code = code; // 'CONVERTER_MISSING' | 'CONVERT_FAILED'
+    this.exitCode = exitCode;
+  }
+}
+
 function defaultRunner(bin, args) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(bin, args, { stdio: ['ignore', 'ignore', 'pipe'] });
@@ -79,6 +97,28 @@ function defaultRunner(bin, args) {
       else reject(new Error(`ebook-convert exited with code ${code}: ${stderr.trim().slice(-500)}`));
     });
   });
+}
+
+/**
+ * Convert one file with ebook-convert and return the plan plus the result.
+ * Skips the work (`converted: false`) when the input already has the target
+ * format. Uses `converter` when given, otherwise looks it up with `finder`.
+ * Throws ConvertError when ebook-convert is missing or fails.
+ *
+ * @param {{ input: string, to?: string, dest?: string, converter?: string, finder?: object, runner?: Function }} opts
+ */
+export async function convertFile({ input, to = DEFAULT_TARGET, dest, converter, finder = {}, runner = defaultRunner }) {
+  const plan = planConversion(input, to, dest);
+  if (!plan.needed) return { converted: false, ...plan };
+  const bin = converter ?? (await findConverter(finder));
+  if (!bin) throw new ConvertError('CONVERTER_MISSING', CONVERTER_MISSING_MESSAGE, EXIT.USAGE);
+  try {
+    await runner(bin, [plan.input, plan.output]);
+  } catch (err) {
+    throw new ConvertError('CONVERT_FAILED', `conversion failed: ${err.message}`, EXIT.NETWORK);
+  }
+  const { size } = await stat(plan.output);
+  return { converted: true, converter: bin, ...plan, sizeBytes: size };
 }
 
 export async function run(opts, command) {
@@ -103,12 +143,7 @@ export async function run(opts, command) {
   }
 
   const converter = await findConverter(opts.finder ?? {});
-  if (!converter) {
-    fail(
-      EXIT.USAGE,
-      'ebook-convert not found. Install Calibre (brew install --cask calibre) or set EBOOK_CONVERT to its path.',
-    );
-  }
+  if (!converter) fail(EXIT.USAGE, CONVERTER_MISSING_MESSAGE);
 
   if (opts.dryRun) {
     emit({ converted: false, dryRun: true, converter, ...plan }, opts, (d) => `would convert ${d.input} -> ${d.output}`);
@@ -116,13 +151,13 @@ export async function run(opts, command) {
   }
 
   log(`converting ${basename(plan.input)} (${plan.inputFormat} -> ${to})`);
+  let size;
   try {
-    await runner(converter, [plan.input, plan.output]);
+    ({ sizeBytes: size } = await convertFile({ input: file, to, dest: opts.dest, converter, runner }));
   } catch (err) {
-    fail(EXIT.NETWORK, `conversion failed: ${err.message}`);
+    fail(err.exitCode ?? EXIT.NETWORK, err.message);
   }
 
-  const { size } = await stat(plan.output);
   let replaced = false;
   if (opts.replace && plan.output !== plan.input) {
     await unlink(plan.input);
