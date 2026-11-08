@@ -345,6 +345,16 @@ describe('searchWithIsbnFallback', () => {
     expect(queries).toHaveLength(2);
   });
 
+  it('returns the resolved title and author so the title gate can check candidates against them', async () => {
+    const { source } = stubSource((q) => (q.isbn ? [] : [cand()]));
+    const found = await searchWithIsbnFallback(source, { isbn: '9781616956479' }, {
+      lookup: async () => ({ title: 'Spook Street', author: 'Mick Herron' }),
+    });
+    expect(found.requested).toEqual({ title: 'Spook Street', author: 'Mick Herron' });
+    const other = cand({ title: 'The Secret Hours', authors: ['Mick Herron'] });
+    expect(mismatchReason(other, found.requested)).toMatch(/title/);
+  });
+
   it('uses the caller title and author instead of the lookup when both are given', async () => {
     const { queries, source } = stubSource((q) => (q.isbn ? [] : [cand()]));
     const lookup = async () => {

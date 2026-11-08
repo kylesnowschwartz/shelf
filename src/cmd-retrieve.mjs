@@ -79,6 +79,9 @@ export async function run(opts /*, command */) {
   log(`source: searching${isbn ? ` by isbn ${isbn}` : ` for "${title}" by ${author}"`}`);
   let result;
   let matchedBy;
+  // The book the title gate checks candidates against: the --title/--author
+  // request, or the title and author an unmatched ISBN resolved to.
+  let requested = title ? { title, author } : null;
   try {
     const found = await withSourceRetry(() =>
       searchWithIsbnFallback(source, {
@@ -92,6 +95,7 @@ export async function run(opts /*, command */) {
       fail(EXIT.NO_DATA, `source has no copy with isbn ${isbn}, and ${found.unresolved}`);
     }
     ({ result, matchedBy } = found);
+    if (found.requested) requested = found.requested;
   } catch (err) {
     handleSourceError(err);
   }
@@ -105,17 +109,17 @@ export async function run(opts /*, command */) {
   const filtered = [];
   const omitted = [];
   let matched = result.candidates;
-  if (title) {
+  if (requested) {
     matched = [];
     for (const c of result.candidates) {
-      const reason = mismatchReason(c, { title, author });
+      const reason = mismatchReason(c, requested);
       if (reason) omitted.push({ candidate: c, reason });
       else matched.push(c);
     }
     if (!matched.length) {
       fail(EXIT.NO_DATA, 'no candidate matches the requested title and author', {
         matchCode: 'NO_MATCH',
-        requested: { title, author },
+        requested,
         omitted,
       });
     }
@@ -524,7 +528,8 @@ export function candidateHasIsbn(c, isbn) {
  * caller's --title/--author when both are given, otherwise Open Library) and
  * the source is searched again by those.
  *
- * Returns { result, matchedBy: 'isbn' | 'title' }, or { unresolved: reason }
+ * Returns { result, matchedBy: 'isbn' | 'title', requested? }. `requested` is the
+ * title and author the fallback searched for. Returns { unresolved: reason }
  * when the fallback could not find a title and author for the ISBN.
  *
  * @param {{ search: Function }} source
@@ -552,7 +557,7 @@ export async function searchWithIsbnFallback(source, { isbn, title, author, exte
   }
   log(`source: searching for "${resolved.title}" by ${resolved.author}`);
   const byTitle = await source.search({ title: resolved.title, author: resolved.author, extensions });
-  return { result: byTitle, matchedBy: 'title' };
+  return { result: byTitle, matchedBy: 'title', requested: resolved };
 }
 
 // ─── batch mode ───────────────────────────────────────────────────────────
