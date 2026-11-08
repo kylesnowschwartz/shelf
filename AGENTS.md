@@ -138,7 +138,8 @@ via Open Library and searches by those, reporting `"matchedBy": "title"`; otherw
 `"isbn"`. If Open Library cannot resolve the ISBN, retrieve exits `3` with the reason.
 
 A `--title` search only ranks candidates whose title and author match the request (series
-prefixes such as "Slough House 4:" are ignored). Candidates that fail the check appear in
+prefixes such as "Slough House 4:" are ignored; a number that is part of the title, as in
+"2001: A Space Odyssey" or "Catch-22", is kept). Candidates that fail the check appear in
 `omitted[]`; if none pass, retrieve exits `3` with `"matchCode": "NO_MATCH"`.
 
 `--dry-run` merges copies of the same edition into one entry (`copies`, `otherSourceIds`)

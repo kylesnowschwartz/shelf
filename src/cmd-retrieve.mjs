@@ -290,6 +290,33 @@ export function rejectReason(c, { extensions = [], maxBytes = null, english = fa
 }
 
 /**
+ * A numbered series prefix: a series name containing a letter, then a one- or
+ * two-digit number set off by a space ("Slough House 4: ", "Slough House, Book
+ * 4 - ", "Series #2: ") or a hyphen ("DCC-02. "), then ":", "." or a dash.
+ * Titles that begin with or are a bare number ("2001: A Space Odyssey",
+ * "1984: A Novel", "Fahrenheit 451: A Novel", "Catch-22: A Novel") do not
+ * match, so their number stays part of the title.
+ */
+const SERIES_PREFIX_RE =
+  /^[^:]{0,60}?[a-z][^:]*?(?:[\s,]+(?:book\s+|#)?\d{1,2}(?:\.\d+)?\s*(?:[:.]|\s[-–—])|-\d{1,2}\.)\s+/;
+
+/** Lower case with diacritics removed. */
+const foldCase = (s) =>
+  String(s || '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+
+/** Words only: "&" spelled out, apostrophes dropped, other punctuation turned into spaces. */
+const wordsOnly = (t) =>
+  t
+    .replace(/&/g, ' and ')
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+/**
  * Reduce a book title to its comparable core: lower case, diacritics and
  * punctuation removed, a leading article dropped, trailing parentheticals
  * ("London Rules (Slough House 5)"), a numbered series prefix
@@ -300,24 +327,49 @@ export function rejectReason(c, { extensions = [], maxBytes = null, english = fa
  * @returns {string}
  */
 export function normalizeTitle(s) {
-  let t = String(s || '')
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+  return titleCore(s, { stripSeries: true });
+}
+
+function titleCore(s, { stripSeries }) {
+  let t = foldCase(s);
   let prev;
   do {
     prev = t;
     t = t.replace(/\s*[([][^()[\]]*[)\]]\s*$/, '').trim();
   } while (t !== prev);
-  t = t.replace(/^.{0,60}?\d+\s*(?:[:.]|\s[-–—])\s+/, '');
+  if (stripSeries) t = t.replace(SERIES_PREFIX_RE, '');
   t = t.split(/\s*:\s*|\s+[-–—]\s+/)[0];
-  return t
-    .replace(/&/g, ' and ')
-    .replace(/['’]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .replace(/^(?:the|a|an)\s+/, '');
+  return wordsOnly(t).replace(/^(?:the|a|an)\s+/, '');
+}
+
+/**
+ * The full title as words: lower case, diacritics and punctuation removed,
+ * nothing else dropped. Two titles that agree here name the same book even
+ * when `normalizeTitle` reduces them differently.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+export function plainTitle(s) {
+  return wordsOnly(foldCase(s));
+}
+
+/**
+ * True when a candidate title names the requested title. Both sides go
+ * through the same reductions, and the titles match when any one agrees:
+ * the `normalizeTitle` core, the same core with any series prefix kept (so
+ * "Agent 6: A Novel" matches "Agent 6"), or the full `plainTitle`.
+ *
+ * @param {string} candidateTitle
+ * @param {string} requestedTitle
+ * @returns {boolean}
+ */
+export function titlesMatch(candidateTitle, requestedTitle) {
+  return (
+    normalizeTitle(candidateTitle) === normalizeTitle(requestedTitle) ||
+    titleCore(candidateTitle, { stripSeries: false }) === titleCore(requestedTitle, { stripSeries: false }) ||
+    plainTitle(candidateTitle) === plainTitle(requestedTitle)
+  );
 }
 
 /** Lower-case word tokens of a person's name, diacritics removed. */
@@ -332,7 +384,7 @@ function nameTokens(s) {
 
 /**
  * Why a candidate is not the requested book, or null when it is. The title
- * must match after `normalizeTitle`. When an author is given and the
+ * must pass `titlesMatch`. When an author is given and the
  * candidate lists authors, the requested surname (last name token) must
  * appear in one of them; a candidate with no author data passes on title.
  *
@@ -341,7 +393,7 @@ function nameTokens(s) {
  * @returns {string|null}
  */
 export function mismatchReason(c, { title, author } = {}) {
-  if (normalizeTitle(c.title) !== normalizeTitle(title)) {
+  if (!titlesMatch(c.title, title)) {
     return `title "${c.title}" does not match "${title}"`;
   }
   const surname = nameTokens(author).at(-1);

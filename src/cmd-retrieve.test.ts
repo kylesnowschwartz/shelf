@@ -14,6 +14,7 @@ import {
   qualityScore,
   rankIndexedCandidates,
   normalizeTitle,
+  titlesMatch,
   mismatchReason,
   withSourceRetry,
   candidateHasIsbn,
@@ -216,6 +217,49 @@ describe('normalizeTitle', () => {
   it('drops a subtitle', () => {
     expect(normalizeTitle('Slow Horses: A Slough House Thriller')).toBe('slow horses');
   });
+
+  it('keeps a number that is the title or starts it', () => {
+    expect(normalizeTitle('2001: A Space Odyssey')).toBe('2001');
+    expect(normalizeTitle('1984: A Novel')).toBe('1984');
+    expect(normalizeTitle('Fahrenheit 451: A Novel')).toBe('fahrenheit 451');
+    expect(normalizeTitle('Catch-22: A Novel')).toBe('catch 22');
+  });
+
+  it('strips series prefixes with "Book N", "#N" and dash separators', () => {
+    expect(normalizeTitle('Slough House, Book 4: Spook Street')).toBe('spook street');
+    expect(normalizeTitle('Slough House #4: Spook Street')).toBe('spook street');
+    expect(normalizeTitle('Slough House 1 - Slow Horses')).toBe('slow horses');
+  });
+});
+
+describe('titlesMatch', () => {
+  it('matches a numeric title against itself', () => {
+    expect(titlesMatch('2001: A Space Odyssey', '2001: A Space Odyssey')).toBe(true);
+  });
+
+  it('rejects a request that drops the number from "2001: A Space Odyssey"', () => {
+    expect(titlesMatch('2001: A Space Odyssey', 'Space Odyssey')).toBe(false);
+  });
+
+  it('does not treat two different "<number>: A Novel" titles as one book', () => {
+    expect(titlesMatch('Fahrenheit 451: A Novel', '1984: A Novel')).toBe(false);
+  });
+
+  it('matches a title against the same title with a subtitle', () => {
+    expect(titlesMatch('1984: A Novel', '1984')).toBe(true);
+    expect(titlesMatch('Agent 6: A Novel', 'Agent 6')).toBe(true);
+  });
+
+  it('still matches a series-prefixed candidate to the bare title', () => {
+    expect(titlesMatch('Slough House 4: Spook Street', 'Spook Street')).toBe(true);
+    expect(titlesMatch("DCC-02. Carl's Doomsday Scenario", "Carl's Doomsday Scenario")).toBe(true);
+  });
+
+  it('accepts titles whose plain words agree when the reduced cores differ', () => {
+    // normalizeTitle cuts these at different colons: "a" vs "a b".
+    expect(normalizeTitle('A: B C')).not.toBe(normalizeTitle('A B: C'));
+    expect(titlesMatch('A: B C', 'A B: C')).toBe(true);
+  });
 });
 
 describe('mismatchReason', () => {
@@ -237,6 +281,12 @@ describe('mismatchReason', () => {
   it('matches a title with a trailing series parenthetical', () => {
     const c = cand({ title: 'London Rules (Slough House 5)', authors: ['Herron, Mick'] });
     expect(mismatchReason(c, { title: 'London Rules', author: 'Mick Herron' })).toBeNull();
+  });
+
+  it('matches "2001: A Space Odyssey" requested by its full title', () => {
+    const c = cand({ title: '2001: A Space Odyssey', authors: ['Arthur C. Clarke'] });
+    expect(mismatchReason(c, { title: '2001: A Space Odyssey', author: 'Arthur C. Clarke' })).toBeNull();
+    expect(mismatchReason(c, { title: 'Space Odyssey', author: 'Arthur C. Clarke' })).toMatch(/title/);
   });
 
   it('rejects an author mismatch', () => {
