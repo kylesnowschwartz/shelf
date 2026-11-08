@@ -111,14 +111,14 @@ program
   .option('--isbn <isbn>', 'preferred identifier; wins over title/author when both are given')
   .option('--title <title>', 'book title (quote it); requires --author')
   .option('--author <author>', 'author name (quote it); requires --title')
-  .option('--ext <list>', 'comma-list of acceptable formats (e.g. epub,azw3) — drops everything else')
+  .option('--ext <list>', 'comma-list of acceptable formats (e.g. azw3,mobi) — drops everything else; defaults to azw3,mobi when delivering to a mounted Kindle (EPUB is refused there — use --dest), otherwise all formats')
   .option('--max-mb <n>', 'skip files larger than this (likely OCR scans / audiobook zips)')
   .option('--english', 'drop candidates whose language is explicitly non-English')
   .option('--dest <dir>', 'force destination dir (overrides Kindle-mount detection)')
   .option('--dry-run', 'search + rank only; print candidates without downloading or delivering')
   .option('--source <name>', 'backend source name (forward-compat; currently zlib only)', 'zlib')
   .option('--source-id <id>', 'explicit candidate id (e.g. zlib:19179031); bypasses search + rank — use when --dry-run shows the heuristic picked wrong')
-  .addHelpText('after', '\nExamples:\n  $ shelf retrieve --isbn 9780441172719\n  $ shelf retrieve --title "Dune" --author "Frank Herbert" --ext epub,azw3\n  $ shelf retrieve --isbn 9780441172719 --dry-run --json\n  $ shelf retrieve --source-id zlib:19179031 --title "Hatchet"')
+  .addHelpText('after', '\nExamples:\n  $ shelf retrieve --isbn 9780441172719\n  $ shelf retrieve --title "Dune" --author "Frank Herbert" --ext epub --dest ~/Books\n  $ shelf retrieve --isbn 9780441172719 --dry-run --json\n  $ shelf retrieve --source-id zlib:19179031 --title "Hatchet"')
   .action(lazy('./src/cmd-retrieve.mjs', 'run'));
 
 program

@@ -5,8 +5,11 @@
 // the composite quality score, and the indexed-pair ranker that fuses
 // format preference + quality + source order.
 
-import { describe, it, expect, vi } from 'vitest';
-import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason, withSourceRetry, candidateHasIsbn, searchWithIsbnFallback } from './cmd-retrieve.mjs';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { rejectReason, qualityScore, rankIndexedCandidates, normalizeTitle, mismatchReason, withSourceRetry, candidateHasIsbn, searchWithIsbnFallback, resolveFormats, kindleEpubError } from './cmd-retrieve.mjs';
 import { SourceError } from './retrieve/sources/zlib.mjs';
 
 const cand = (overrides = {}) => ({
@@ -360,5 +363,48 @@ describe('searchWithIsbnFallback', () => {
     const found = await searchWithIsbnFallback(source, { title: 'Dead Lions', author: 'Mick Herron' });
     expect(found.matchedBy).toBe('title');
     expect(queries).toEqual([{ title: 'Dead Lions', author: 'Mick Herron', extensions: undefined }]);
+  });
+});
+
+describe('resolveFormats (Kindle format default)', () => {
+  let mount: string;
+  const missing = '/nonexistent/shelf-kindle-mount';
+  beforeAll(() => {
+    mount = mkdtempSync(join(tmpdir(), 'shelf-kindle-'));
+  });
+  afterAll(() => rmSync(mount, { recursive: true, force: true }));
+  const kindleEnv = () => ({ SHELF_RETRIEVE_KINDLE_MOUNT: mount });
+  const noKindle = { env: {}, mountDefault: missing };
+
+  it('defaults to azw3,mobi when the Kindle is mounted and --ext is absent', () => {
+    expect(resolveFormats({ env: kindleEnv() })).toEqual({ extensions: ['azw3', 'mobi'], kindle: true });
+  });
+
+  it('keeps an explicit non-EPUB --ext on the Kindle', () => {
+    expect(resolveFormats({ ext: 'AZW3', env: kindleEnv() })).toEqual({ extensions: ['azw3'], kindle: true });
+  });
+
+  it('refuses --ext containing epub when delivering to the Kindle', () => {
+    for (const ext of ['epub', 'azw3,epub']) {
+      const r = resolveFormats({ ext, env: kindleEnv() });
+      expect(r.error).toMatch(/--dest/);
+    }
+  });
+
+  it('keeps the all-formats default when the Kindle is not mounted', () => {
+    expect(resolveFormats(noKindle)).toEqual({ extensions: [], kindle: false });
+    expect(resolveFormats({ ...noKindle, ext: 'epub' })).toEqual({ extensions: ['epub'], kindle: false });
+  });
+
+  it('keeps the current default and allows epub when --dest is set, even with the Kindle mounted', () => {
+    expect(resolveFormats({ dest: '/tmp/books', env: kindleEnv() })).toEqual({ extensions: [], kindle: false });
+    expect(resolveFormats({ ext: 'epub', dest: '/tmp/books', env: kindleEnv() }).error).toBeUndefined();
+  });
+
+  it('kindleEpubError blocks only an EPUB headed to the Kindle', () => {
+    expect(kindleEpubError({ format: 'EPUB', env: kindleEnv() })).toMatch(/--dest/);
+    expect(kindleEpubError({ format: 'azw3', env: kindleEnv() })).toBeNull();
+    expect(kindleEpubError({ format: 'epub', dest: '/tmp/books', env: kindleEnv() })).toBeNull();
+    expect(kindleEpubError({ format: 'epub', ...noKindle })).toBeNull();
   });
 });
