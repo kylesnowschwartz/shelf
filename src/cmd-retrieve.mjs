@@ -2,8 +2,8 @@
 //
 // This is the orchestrator. It owns the deterministic mechanics: build the
 // query, apply hard filters, pick the best edition by format → size, download
-// into a tmp dir, convert an EPUB or MOBI to AZW3 when a mounted Kindle has no
-// AZW3 copy to receive, hand off to deliver(). Judgment about edition quality stays
+// into a tmp dir, convert an EPUB or MOBI bound for a mounted Kindle to AZW3,
+// hand off to deliver(). Judgment about edition quality stays
 // in the calling agent's prompt; the CLI gives it a sensible default pick
 // plus the full candidate list so the agent can override with --source-id
 // later if it wants to.
@@ -19,7 +19,7 @@
 // forward-compat without leaking source identity through the interface).
 
 import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { log, emit, fail, EXIT } from './output.mjs';
 import * as zlib from './retrieve/sources/zlib.mjs';
@@ -132,31 +132,22 @@ export async function run(opts /*, command */) {
   }
 
   // ─── 6. convert (EPUB/MOBI bound for the Kindle) + deliver ──────────────
-  let sourcePath = downloaded.path;
-  let deliverFormat = picked.format || downloaded.format || 'epub';
-  let convertedFrom;
-  if (convert) {
-    const fromFormat = String(downloaded.format || picked.format || 'file').toLowerCase();
-    let conversion;
-    try {
-      log(`converting ${fromFormat} to azw3`);
-      conversion = await convertFile({ input: downloaded.path, to: 'azw3', converter, runner: opts.runner });
-    } catch (err) {
-      await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
-      fail(err.exitCode ?? EXIT.NETWORK, `${err.message}. The ${fromFormat} file was not delivered.`, {
-        convertFrom: fromFormat,
-      });
-    }
-    sourcePath = conversion.output;
-    deliverFormat = 'azw3';
-    if (conversion.converted) convertedFrom = fromFormat;
-  }
-  await refuseEpubOnKindle(deliverFormat, opts.dest, stagingDir);
+  const deliveryTitle = picked.title || title || isbn || 'book';
+  const { sourcePath, format: deliverFormat, convertedFrom } = await prepareKindleDelivery({
+    downloaded,
+    format: downloaded.format || picked.format || 'epub',
+    title: deliveryTitle,
+    dest: opts.dest,
+    stagingDir,
+    converter,
+    finder: opts.finder,
+    runner: opts.runner,
+  });
   let delivered;
   try {
     delivered = await deliver({
       sourcePath,
-      title: picked.title || title || isbn || 'book',
+      title: deliveryTitle,
       format: deliverFormat,
       dest: opts.dest,
     });
@@ -288,14 +279,15 @@ function parseList(s) {
 }
 
 // Kyle's Kindle displays only AZW3 files copied over USB; sideloaded EPUB and
-// MOBI files do not appear. When no AZW3 exists, retrieve converts an EPUB or
-// MOBI (EPUB preferred, by FORMAT_RANK) to AZW3 before delivery.
+// MOBI files do not appear. When no AZW3 exists, retrieve searches for an EPUB
+// or MOBI (EPUB preferred, by FORMAT_RANK), and any EPUB or MOBI download bound
+// for the Kindle is converted to AZW3 before delivery.
 const KINDLE_DEFAULT_EXTENSIONS = ['azw3'];
 const KINDLE_CONVERTIBLE_EXTENSIONS = ['epub', 'mobi'];
 const KINDLE_UNREADABLE_FORMATS = new Set(['epub', 'mobi']);
 const KINDLE_FORMAT_REFUSAL =
-  'EPUB and MOBI files do not display on the Kindle; pass --dest <dir> to save the file, ' +
-  'then run `shelf convert <file> --replace` to make an AZW3, or choose --ext azw3';
+  'EPUB and MOBI files do not display on the Kindle; drop --ext so retrieve delivers an AZW3 ' +
+  '(converting an EPUB or MOBI when no AZW3 exists), or pass --dest <dir> to save the file as it is';
 
 /**
  * Resolve the format filter for this run. When delivery is headed to a
@@ -320,24 +312,69 @@ export function resolveFormats({ ext, dest, env, mountDefault } = {}) {
 }
 
 /**
- * Error message when a file of `format` would land on the Kindle as an EPUB or MOBI,
- * else null. Covers paths where the format is only known after download
- * (--source-id, or a candidate whose format the search left blank).
+ * True when a downloaded file of `format` is headed to the mounted Kindle as
+ * an EPUB or MOBI, so it must become an AZW3 before delivery. Other formats
+ * (AZW3, PDF, TXT) are delivered as they are.
  *
  * @param {{ format?: string, dest?: string, env?: Record<string, string|undefined>, mountDefault?: string }} opts
- * @returns {string|null}
+ * @returns {boolean}
  */
-export function kindleFormatError({ format, dest, env, mountDefault } = {}) {
-  if (!KINDLE_UNREADABLE_FORMATS.has(String(format || '').toLowerCase())) return null;
-  const kindle = decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
-  return kindle ? KINDLE_FORMAT_REFUSAL : null;
+export function kindleNeedsConversion({ format, dest, env, mountDefault } = {}) {
+  if (!KINDLE_UNREADABLE_FORMATS.has(String(format || '').toLowerCase())) return false;
+  return decideDestination({ destOverride: dest, env, mountDefault }).kind === 'kindle';
 }
 
-async function refuseEpubOnKindle(format, dest, stagingDir) {
-  const error = kindleFormatError({ format, dest });
-  if (!error) return;
-  await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
-  fail(EXIT.USAGE, error);
+/**
+ * Turn a downloaded file into the file to deliver. An EPUB or MOBI headed to
+ * the mounted Kindle is converted to AZW3 inside `stagingDir`, with
+ * `converter` when the caller already found one, otherwise with the one
+ * `finder` locates. Any other download is delivered as it is.
+ *
+ * Returns { sourcePath, format, convertedFrom? }. Exits when the conversion
+ * cannot run, after removing `stagingDir`:
+ *   - ebook-convert missing (exit 2): the downloaded file is saved to
+ *     ~/Downloads, since it cannot go to the Kindle, and the error names
+ *     where it went so it can be converted by hand later.
+ *   - ebook-convert failed (exit 5): nothing is delivered.
+ */
+async function prepareKindleDelivery({ downloaded, format, title, dest, stagingDir, converter, finder, runner }) {
+  const fromFormat = String(format).toLowerCase();
+  if (!kindleNeedsConversion({ format: fromFormat, dest })) {
+    return { sourcePath: downloaded.path, format: fromFormat };
+  }
+  const bin = converter ?? (await findConverter(finder ?? {}));
+  if (!bin) {
+    let savedTo = null;
+    try {
+      ({ destination: savedTo } = await deliver({
+        sourcePath: downloaded.path,
+        title,
+        format: fromFormat,
+        dest: join(homedir(), 'Downloads'),
+      }));
+    } catch {
+      // The error below still explains why nothing reached the Kindle.
+    }
+    await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+    const where = savedTo ? `it was saved to ${savedTo}` : 'it could not be saved';
+    fail(
+      EXIT.USAGE,
+      `${CONVERTER_MISSING_MESSAGE} The ${fromFormat} file was already downloaded but the Kindle shows only ` +
+        `AZW3, so it was not delivered; ${where}. Install Calibre, then run \`shelf convert <file> --replace\`.`,
+      { convertFrom: fromFormat, savedTo },
+    );
+  }
+  let conversion;
+  try {
+    log(`converting ${fromFormat} to azw3`);
+    conversion = await convertFile({ input: downloaded.path, to: 'azw3', converter: bin, runner });
+  } catch (err) {
+    await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+    fail(err.exitCode ?? EXIT.NETWORK, `${err.message}. The ${fromFormat} file was not delivered.`, {
+      convertFrom: fromFormat,
+    });
+  }
+  return { sourcePath: conversion.output, format: 'azw3', convertedFrom: fromFormat };
 }
 
 function parseMaxMb(s) {
@@ -794,13 +831,22 @@ async function runSourceIdBypass(source, opts) {
     await rm(stagingDir, { recursive: true, force: true }).catch(() => {});
     handleSourceError(err);
   }
-  await refuseEpubOnKindle(downloaded.format || 'epub', opts.dest, stagingDir);
+  const deliveryTitle = opts.title || downloaded.name || opts.sourceId;
+  const { sourcePath, format, convertedFrom } = await prepareKindleDelivery({
+    downloaded,
+    format: downloaded.format || 'epub',
+    title: deliveryTitle,
+    dest: opts.dest,
+    stagingDir,
+    finder: opts.finder,
+    runner: opts.runner,
+  });
   let delivered;
   try {
     delivered = await deliver({
-      sourcePath: downloaded.path,
-      title: opts.title || downloaded.name || opts.sourceId,
-      format: downloaded.format || 'epub',
+      sourcePath,
+      title: deliveryTitle,
+      format,
       dest: opts.dest,
     });
   } finally {
@@ -818,6 +864,7 @@ async function runSourceIdBypass(source, opts) {
       mounted: delivered.mounted,
       kind: delivered.kind,
       format: delivered.format,
+      ...(convertedFrom ? { convertedFrom } : {}), // 'epub' | 'mobi' — the downloaded format, converted to AZW3
       sizeBytes: delivered.sizeBytes,
       reused: delivered.reused, // true when an identical file was already at the destination
       transport: downloaded.transport, // 'binary' | 'browser' — which path delivered

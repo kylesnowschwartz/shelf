@@ -126,9 +126,15 @@ it to AZW3 with Calibre's `ebook-convert`, delivers only the AZW3, and deletes t
 downloaded file. The result then carries `"convertedFrom": "epub"` or `"mobi"`; a
 `--dry-run` that would convert shows `"convertTo": "azw3"`. If Calibre is missing, retrieve
 exits `2` before downloading; if the conversion fails, it exits `5`; in both cases nothing
-is delivered. An explicit `--ext azw3` never converts, and an explicit `--ext` with EPUB or
-MOBI (or a `--source-id` download that turns out to be one) exits `2`. To convert by hand
-instead, save the file with `--dest <dir>` and run `convert` on it.
+is delivered. An explicit `--ext azw3` never searches for EPUB or MOBI, and an explicit
+`--ext` with EPUB or MOBI exits `2`.
+
+Any download bound for the Kindle that turns out to be EPUB or MOBI — a `--source-id`
+fetch, or a candidate whose format the search did not list — is converted the same way and
+reports `convertedFrom`. Because that download has already happened, a missing Calibre
+saves the file to `~/Downloads` instead (exit `2`, the error's `savedTo` names the file)
+and nothing reaches the Kindle. Other formats, such as PDF, are delivered as they are. To
+convert by hand instead, save the file with `--dest <dir>` and run `convert` on it.
 
 Filename is the slugified title without series text ("Slough House 4: Spook Street" →
 `spook-street.azw3`) + format extension. Delivery never overwrites a file: when a

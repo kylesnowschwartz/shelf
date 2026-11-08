@@ -160,8 +160,12 @@ Source a copy of a specific book and deliver it. Triggers: *"get me a copy of X"
    the AZW3. The JSON then says `"convertedFrom": "epub"` (or `"mobi"`) — tell Kyle it was
    converted. If Calibre is missing, retrieve exits `2` with an install hint before
    downloading anything; if the conversion fails, it exits `5`. Nothing is delivered in
-   either case. Do not pass `--ext azw3` for the Kindle: an explicit `--ext` turns the
-   conversion off. To convert by hand instead, retrieve with `--dest <dir>`, run
+   either case. Do not pass `--ext azw3` for the Kindle: an explicit `--ext` stops the
+   search for an EPUB or MOBI to convert. A `--source-id` fetch that turns out to be EPUB
+   or MOBI is converted too; if Calibre is missing there, the download has already
+   happened, so retrieve saves it to `~/Downloads` (the error's `savedTo`) and exits `2` —
+   tell Kyle where it is and that it needs Calibre before it can go on the Kindle. To
+   convert by hand instead, retrieve with `--dest <dir>`, run
    `shelf convert <file> --replace`, and copy the AZW3 to `/Volumes/Kindle/documents/`.
    Without the Kindle, the engine prefers AZW3, then EPUB, then MOBI, then PDF (poor
    reflow). Add `--ext <list>` to be strict, `--english` to drop non-English editions,

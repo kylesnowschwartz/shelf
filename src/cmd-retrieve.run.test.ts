@@ -144,7 +144,7 @@ describe('retrieve to a mounted Kindle when no AZW3 exists', () => {
     vi.stubEnv('SHELF_RETRIEVE_KINDLE_MOUNT', kindle);
     downloadedPaths = [];
     download.mockImplementation(async ({ sourceId, destDir }: any) => {
-      const format = sourceId.endsWith('epub') ? 'epub' : sourceId.endsWith('mobi') ? 'mobi' : 'azw3';
+      const format = sourceId.split(':')[1]; // 'zlib:epub' downloads an EPUB
       const path = join(destDir, `download.${format}`);
       writeFileSync(path, `${format} bytes`);
       downloadedPaths.push(path);
@@ -154,10 +154,10 @@ describe('retrieve to a mounted Kindle when no AZW3 exists', () => {
 
   afterEach(() => download.mockReset());
 
-  /** Search stub: the source holds `candidates`; a search's format filter is honoured. */
+  /** Search stub: the source holds `candidates`; a search's format filter is honoured for listed formats. */
   const sourceHas = (candidates: any[]) =>
     search.mockImplementation(async (q: any) => ({
-      candidates: candidates.filter((c) => !q.extensions || q.extensions.includes(c.format)),
+      candidates: candidates.filter((c) => !q.extensions || !c.format || q.extensions.includes(c.format)),
       page: 1,
       totalPages: 1,
     }));
@@ -264,11 +264,117 @@ describe('retrieve to a mounted Kindle when no AZW3 exists', () => {
     expect(download).not.toHaveBeenCalled();
   });
 
-  it('does not convert when --ext azw3 is given explicitly', async () => {
+  it('does not search for EPUB or MOBI when --ext azw3 is given explicitly', async () => {
     sourceHas([book('zlib:epub', 'epub')]);
     const { code } = await kindleRun({ ext: 'azw3' });
     expect(code).toBe(3);
     expect(search).toHaveBeenCalledTimes(1);
     expect(download).not.toHaveBeenCalled();
+  });
+
+  it('converts a candidate with no listed format that downloads as a MOBI', async () => {
+    sourceHas([{ ...book('zlib:mobi', 'azw3'), format: null }]);
+    const runner = async (_bin: string, args: string[]) => writeFileSync(args[1], 'azw3 bytes');
+
+    const { code, result } = await kindleRun({ runner, ext: 'azw3' });
+
+    expect(code).toBe(0);
+    expect(result).toMatchObject({ format: 'azw3', convertedFrom: 'mobi' });
+    expect(readdirSync(documents)).toEqual(['spook-street.azw3']);
+    expect(existsSync(downloadedPaths[0])).toBe(false);
+  });
+});
+
+describe('retrieve --source-id to a mounted Kindle', () => {
+  const download = zlib.download as unknown as ReturnType<typeof vi.fn>;
+  let kindle: string;
+  let documents: string;
+  let home: string;
+  let downloadedPaths: string[];
+
+  beforeEach(() => {
+    kindle = join(root, 'kindle');
+    documents = join(kindle, 'documents');
+    home = join(root, 'home');
+    mkdirSync(kindle);
+    mkdirSync(home);
+    vi.stubEnv('SHELF_RETRIEVE_KINDLE_MOUNT', kindle);
+    vi.stubEnv('HOME', home);
+    downloadedPaths = [];
+    download.mockImplementation(async ({ sourceId, destDir }: any) => {
+      const format = sourceId.split(':')[1];
+      const path = join(destDir, `download.${format}`);
+      writeFileSync(path, `${format} bytes`);
+      downloadedPaths.push(path);
+      return { path, format, sizeBytes: 10, name: 'Spook Street', transport: 'binary' };
+    });
+  });
+
+  afterEach(() => download.mockReset());
+
+  const finder = { env: { EBOOK_CONVERT: '/fake/ebook-convert' }, isExec: async () => true };
+  const runner = async (_bin: string, args: string[]) => writeFileSync(args[1], 'azw3 bytes');
+  const bypass = (sourceId: string, opts: Record<string, unknown> = {}) =>
+    retrieve({ sourceId, dest: undefined, finder, runner, ...opts });
+
+  it('converts a downloaded EPUB to AZW3 and delivers only the AZW3', async () => {
+    const { code, result } = await bypass('zlib:epub');
+
+    expect(code).toBe(0);
+    expect(result).toMatchObject({
+      bypassed: true,
+      kind: 'kindle',
+      format: 'azw3',
+      convertedFrom: 'epub',
+      destination: join(documents, 'spook-street.azw3'),
+    });
+    expect(readdirSync(documents)).toEqual(['spook-street.azw3']);
+    expect(existsSync(downloadedPaths[0])).toBe(false);
+  });
+
+  it('converts a downloaded MOBI too', async () => {
+    const { code, result } = await bypass('zlib:mobi');
+    expect(code).toBe(0);
+    expect(result.convertedFrom).toBe('mobi');
+  });
+
+  it('saves the download to ~/Downloads and delivers nothing when Calibre is missing', async () => {
+    const missing = { env: { EBOOK_CONVERT: '/nowhere/ebook-convert' }, isExec: async () => false };
+
+    const { code, error } = await bypass('zlib:epub', { finder: missing });
+
+    expect(code).toBe(2);
+    expect(error.message).toMatch(/ebook-convert not found.*already downloaded.*not delivered/);
+    expect(error.savedTo).toBe(join(home, 'Downloads', 'spook-street.epub'));
+    expect(readFileSync(error.savedTo, 'utf8')).toBe('epub bytes');
+    expect(existsSync(documents) ? readdirSync(documents) : []).toEqual([]);
+    expect(existsSync(downloadedPaths[0])).toBe(false);
+  });
+
+  it('delivers nothing when the conversion fails', async () => {
+    const failing = async () => {
+      throw new Error('ebook-convert exited with code 1: bad input');
+    };
+    const { code, error } = await bypass('zlib:epub', { runner: failing });
+    expect(code).toBe(5);
+    expect(error.message).toMatch(/conversion failed.*The epub file was not delivered/);
+    expect(existsSync(documents) ? readdirSync(documents) : []).toEqual([]);
+  });
+
+  it('delivers a PDF as it is', async () => {
+    const conversions = vi.fn();
+    const { code, result } = await bypass('zlib:pdf', { runner: conversions });
+    expect(code).toBe(0);
+    expect(result.format).toBe('pdf');
+    expect(result).not.toHaveProperty('convertedFrom');
+    expect(conversions).not.toHaveBeenCalled();
+  });
+
+  it('keeps an EPUB as it is when --dest is given', async () => {
+    const conversions = vi.fn();
+    const { code, result } = await bypass('zlib:epub', { dest: join(root, 'out'), runner: conversions });
+    expect(code).toBe(0);
+    expect(result).toMatchObject({ kind: 'override', format: 'epub' });
+    expect(conversions).not.toHaveBeenCalled();
   });
 });

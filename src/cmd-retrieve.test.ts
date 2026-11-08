@@ -21,7 +21,7 @@ import {
   searchWithIsbnFallback,
   resolveIsbn,
   resolveFormats,
-  kindleFormatError,
+  kindleNeedsConversion,
   editionTitleKey,
   publisherFamily,
   compactCandidates,
@@ -539,12 +539,13 @@ describe('resolveFormats (Kindle format default)', () => {
     expect(resolveFormats({ ext: 'epub', dest: '/tmp/books', env: kindleEnv() }).error).toBeUndefined();
   });
 
-  it('kindleFormatError blocks only EPUB and MOBI headed to the Kindle', () => {
-    expect(kindleFormatError({ format: 'EPUB', env: kindleEnv() })).toMatch(/--dest/);
-    expect(kindleFormatError({ format: 'MOBI', env: kindleEnv() })).toMatch(/shelf convert/);
-    expect(kindleFormatError({ format: 'azw3', env: kindleEnv() })).toBeNull();
-    expect(kindleFormatError({ format: 'epub', dest: '/tmp/books', env: kindleEnv() })).toBeNull();
-    expect(kindleFormatError({ format: 'epub', ...noKindle })).toBeNull();
+  it('kindleNeedsConversion is true only for EPUB and MOBI headed to the Kindle', () => {
+    expect(kindleNeedsConversion({ format: 'EPUB', env: kindleEnv() })).toBe(true);
+    expect(kindleNeedsConversion({ format: 'MOBI', env: kindleEnv() })).toBe(true);
+    expect(kindleNeedsConversion({ format: 'azw3', env: kindleEnv() })).toBe(false);
+    expect(kindleNeedsConversion({ format: 'pdf', env: kindleEnv() })).toBe(false);
+    expect(kindleNeedsConversion({ format: 'epub', dest: '/tmp/books', env: kindleEnv() })).toBe(false);
+    expect(kindleNeedsConversion({ format: 'epub', ...noKindle })).toBe(false);
   });
 });
 
